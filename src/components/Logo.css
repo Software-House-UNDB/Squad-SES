@@ -1,0 +1,36 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-primary);
+}
+
+.logo__icon {
+  width: 34px;
+  height: 28px;
+}
+
+.logo__text {
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+  color: var(--color-primary);
+}
+
+.logo--lg .logo__icon {
+  width: 46px;
+  height: 38px;
+}
+
+.logo--lg .logo__text {
+  font-size: 28px;
+}
+
+.logo--sm .logo__icon {
+  width: 26px;
+  height: 22px;
+}
+
+.logo--sm .logo__text {
+  font-size: 17px;
+}
