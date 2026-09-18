@@ -51,3 +51,20 @@
   font-size: 13px;
   font-weight: 700;
 }
+
+.topbar__logout {
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.topbar__logout:hover {
+  background: var(--color-bg);
+  color: var(--color-danger);
+}
