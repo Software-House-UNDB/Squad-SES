@@ -8,6 +8,12 @@ const initialForm = {
   senha: '',
 }
 
+// Credencial fixa para a demonstração aos stakeholders. Remover quando a autenticação real for integrada.
+const DEMO_USER = {
+  email: 'coordenacao@espma.edu.br',
+  senha: 'Espma@2026',
+}
+
 export default function Login() {
   const navigate = useNavigate()
   const [form, setForm] = useState(initialForm)
@@ -43,7 +49,16 @@ export default function Login() {
     setSubmitting(true)
     setTimeout(() => {
       setSubmitting(false)
-      navigate('/dashboard')
+
+      const credentialsMatch =
+        form.email.trim().toLowerCase() === DEMO_USER.email && form.senha === DEMO_USER.senha
+
+      if (!credentialsMatch) {
+        setErrors({ credenciais: 'E-mail ou senha inválidos.' })
+        return
+      }
+
+      navigate('/gerenciamento/analise-oficios')
     }, 500)
   }
 
@@ -52,6 +67,14 @@ export default function Login() {
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
         <h1 className="auth-form__title">Entrar</h1>
         <p className="auth-form__subtitle">Acesse sua conta institucional</p>
+
+        <div className="auth-form__demo-hint">
+          <strong>Acesso de demonstração</strong>
+          <span>{DEMO_USER.email}</span>
+          <span>{DEMO_USER.senha}</span>
+        </div>
+
+        {errors.credenciais && <p className="form-error form-error--general">{errors.credenciais}</p>}
 
         <div className={`form-field ${errors.email ? 'has-error' : ''}`}>
           <label htmlFor="email">E-mail Institucional</label>
