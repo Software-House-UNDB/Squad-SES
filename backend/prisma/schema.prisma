@@ -66,7 +66,7 @@ model Processo {
 model Estagiario {
   id           String   @id @default(uuid()) @db.Uuid
   processoId   String   @map("processo_id") @db.Uuid
-  processo     Processo @relation(fields: [processoId], references: [id], onDelete: Cascade)
+  processo     Processo @relation(fields: [processoId], references: [id], onDelete: Restrict)
   nome         String
   cpf          String   @db.Char(11)
   matricula    String

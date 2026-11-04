@@ -68,4 +68,4 @@ CREATE UNIQUE INDEX "estagiarios_processo_id_matricula_key" ON "estagiarios"("pr
 ALTER TABLE "processos" ADD CONSTRAINT "processos_criado_por_id_fkey" FOREIGN KEY ("criado_por_id") REFERENCES "usuarios"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "estagiarios" ADD CONSTRAINT "estagiarios_processo_id_fkey" FOREIGN KEY ("processo_id") REFERENCES "processos"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "estagiarios" ADD CONSTRAINT "estagiarios_processo_id_fkey" FOREIGN KEY ("processo_id") REFERENCES "processos"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
