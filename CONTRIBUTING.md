@@ -15,14 +15,15 @@ Guia curto para a Software House UNDB. Qualquer dúvida, Tech Lead (Rondineli) o
 git clone https://github.com/Software-House-UNDB/Squad-SES.git
 cd Squad-SES
 git checkout dev
-npm install
-cp backend/.env.example backend/.env
-npm run db:up
+npm install   # usa .npmrc com legacy-peer-deps (necessário pra Vitest + Vite 8)
+npm run db:up # sobe Postgres + MinIO (requer Docker Desktop rodando)
 ```
 
 Checar se subiu:
-- API Postgres: `localhost:5432` (user `postgres` / senha `postgres` / db `ses_dev`)
+- Postgres: `localhost:5432` (user `postgres` / senha `postgres` / db `ses_dev`)
 - Console MinIO: http://localhost:9001 (user `minioadmin` / senha `minioadmin`)
+
+> **Nota**: o `backend/.env.example` ainda não foi criado — vai entrar junto com a task do Prisma. Enquanto isso, não precisa de `.env` pra rodar `build`/`test`.
 
 ## Rodando
 
@@ -51,6 +52,8 @@ Abra PR para `dev`. Aguarde:
 
 Trunk-based: PRs pequenos, merge rápido, nada de branch longa.
 
+> **Branch protection ainda não está ativada** (pendente — plano Free do GitHub não libera em repos privados; ver `README_CI.md` seção Protection). Enquanto isso, respeite o fluxo por convenção: **ninguém mergeia direto em `dev` ou `main` sem PR + review**.
+
 ## Conventional Commits (obrigatório no título do PR)
 
 | Prefixo    | Quando usar                                    |
@@ -73,7 +76,7 @@ npm run test
 npm run format
 ```
 
-Se mexeu no schema do Prisma:
+Se mexeu no schema do Prisma (**assim que o Prisma for adicionado — ainda não está**):
 
 ```bash
 cd backend
@@ -84,12 +87,14 @@ Commitar a pasta `prisma/migrations/`.
 
 ## CODEOWNERS
 
-Revisão obrigatória pela área que você mexeu:
+Revisão obrigatória pela área que você mexeu (quando branch protection ativar):
 
-- `/backend/` → William + Victor
-- `/frontend/` → Helio + Luis Felipe + Renan
-- `/docker-compose.yml`, `/backend/prisma/` → Rondineli + Akira
-- `/.github/` → Akira
+- `/backend/` → William (`@wirsokk`) + Victor (`@vikviktorr`)
+- `/frontend/` → Helio (`@heliolevi`) + Luis Felipe (`@luiscstro`) + Renan (`@renanpires`)
+- `/docker-compose.yml`, `/backend/prisma/` → Rondineli + Akira (`@AkiraGitDev`)
+- `/.github/` → Akira (`@AkiraGitDev`)
+
+> Handle do Rondineli no `CODEOWNERS` ainda é placeholder (`@rondineli-handle`). Ele troca pro real quando puder.
 
 ## O que NÃO commitar
 
@@ -100,5 +105,9 @@ Revisão obrigatória pela área que você mexeu:
 ## Dúvidas comuns
 
 **CI quebrou e eu não entendo o erro:** chama Akira (CI/CD).
-**Prisma tá reclamando de drift no banco:** `npm run db:reset` (apaga volumes, sobe do zero).
+
+**`npm install` quebra com `Cannot read properties of null (reading 'edgesOut')`:** falta o `.npmrc` com `legacy-peer-deps=true` na raiz — deveria vir no clone. Se deletou por engano, recrie com essa linha e rode de novo.
+
+**Prisma tá reclamando de drift no banco** (quando Prisma for adicionado): `npm run db:reset` (apaga volumes do docker-compose, sobe do zero).
+
 **oxlint tá brigando:** roda `npm run format` e tenta de novo; se persistir, chama o CODEOWNER da área.
