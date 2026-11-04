@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  changes:
+    name: Detectar mudanças
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/ci.yml'
+
+  backend:
+    name: Backend (lint + build + test)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install (root workspace)
+        run: npm ci
+
+      # Prisma steps: só rodam depois que Prisma for adicionado ao backend
+      - name: Prisma generate
+        run: npm run prisma:generate --workspace=backend --if-present
+
+      - name: Lint
+        run: npm run lint --workspace=backend
+
+      - name: Build
+        run: npm run build --workspace=backend
+
+      - name: Unit tests
+        run: npm run test --workspace=backend
+
+  frontend:
+    name: Frontend (lint + build + test)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install (root workspace)
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --workspace=frontend
+
+      - name: Type check
+        run: npm run typecheck --workspace=frontend --if-present
+
+      - name: Build
+        run: npm run build --workspace=frontend
+
+      - name: Unit tests
+        run: npm run test --workspace=frontend --if-present
+
+  ci-ok:
+    name: CI OK
+    needs: [changes, backend, frontend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verifica resultado dos jobs
+        run: |
+          if [[ "${{ needs.changes.result }}" != "success" ]]; then
+            echo "Job 'changes' falhou: ${{ needs.changes.result }}"; exit 1
+          fi
+          for result in "${{ needs.backend.result }}" "${{ needs.frontend.result }}"; do
+            if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
+              echo "Algum job de build/test falhou: $result"; exit 1
+            fi
+          done
+          echo "OK"

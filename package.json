@@ -1,0 +1,27 @@
+{
+  "name": "ses-undb-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sistema de Gestão de Documentação de Estagiários SES-MA ↔ UNDB",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "lint": "npm run lint --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml}\"",
+    "db:up": "docker compose up -d postgres minio minio-setup",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d postgres minio minio-setup"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
