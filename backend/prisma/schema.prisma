@@ -1,0 +1,83 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Perfil {
+  COORDENACAO_SES
+  REPRESENTANTE_UNDB
+
+  @@map("perfil")
+}
+
+enum StatusProcesso {
+  rascunho
+  enviado
+  em_analise
+  pendencia
+  aprovado
+  aguardando_assinaturas
+  concluido
+
+  @@map("status_processo")
+}
+
+enum TipoEstagio {
+  obrigatorio
+  pos_graduacao
+
+  @@map("tipo_estagio")
+}
+
+model Usuario {
+  id           String     @id @default(uuid()) @db.Uuid
+  nome         String
+  email        String     @unique
+  senhaHash    String     @map("senha_hash")
+  perfil       Perfil
+  criadoEm     DateTime   @default(now()) @map("criado_em")
+  atualizadoEm DateTime   @updatedAt @map("atualizado_em")
+  processos    Processo[]
+
+  @@map("usuarios")
+}
+
+model Processo {
+  id           String         @id @default(uuid()) @db.Uuid
+  tipoEstagio  TipoEstagio    @map("tipo_estagio")
+  status       StatusProcesso @default(rascunho)
+  criadoPorId  String         @map("criado_por_id") @db.Uuid
+  criadoPor    Usuario        @relation(fields: [criadoPorId], references: [id], onDelete: Restrict)
+  criadoEm     DateTime       @default(now()) @map("criado_em")
+  atualizadoEm DateTime       @updatedAt @map("atualizado_em")
+  estagiarios  Estagiario[]
+
+  @@index([status])
+  @@index([criadoPorId])
+  @@map("processos")
+}
+
+model Estagiario {
+  id           String   @id @default(uuid()) @db.Uuid
+  processoId   String   @map("processo_id") @db.Uuid
+  processo     Processo @relation(fields: [processoId], references: [id], onDelete: Cascade)
+  nome         String
+  cpf          String   @db.Char(11)
+  matricula    String
+  curso        String
+  cidade       String
+  uf           String   @db.Char(2)
+  cep          String   @db.Char(8)
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  @@unique([processoId, cpf])
+  @@unique([processoId, matricula])
+  @@map("estagiarios")
+}

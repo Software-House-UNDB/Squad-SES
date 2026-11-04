@@ -23,7 +23,7 @@ Checar se subiu:
 - Postgres: `localhost:5432` (user `postgres` / senha `postgres` / db `ses_dev`)
 - Console MinIO: http://localhost:9001 (user `minioadmin` / senha `minioadmin`)
 
-> **Nota**: o `backend/.env.example` ainda não foi criado — vai entrar junto com a task do Prisma. Enquanto isso, não precisa de `.env` pra rodar `build`/`test`.
+> **Nota**: copie o arquivo de ambiente antes de rodar o backend: `cp backend/.env.example backend/.env`.
 
 ## Rodando
 
@@ -76,7 +76,7 @@ npm run test
 npm run format
 ```
 
-Se mexeu no schema do Prisma (**assim que o Prisma for adicionado — ainda não está**):
+Se mexeu no schema do Prisma:
 
 ```bash
 cd backend
@@ -108,6 +108,6 @@ Revisão obrigatória pela área que você mexeu (quando branch protection ativa
 
 **`npm install` quebra com `Cannot read properties of null (reading 'edgesOut')`:** falta o `.npmrc` com `legacy-peer-deps=true` na raiz — deveria vir no clone. Se deletou por engano, recrie com essa linha e rode de novo.
 
-**Prisma tá reclamando de drift no banco** (quando Prisma for adicionado): `npm run db:reset` (apaga volumes do docker-compose, sobe do zero).
+**Prisma tá reclamando de drift no banco:** `npm run db:reset` (apaga volumes do docker-compose, sobe do zero).
 
 **oxlint tá brigando:** roda `npm run format` e tenta de novo; se persistir, chama o CODEOWNER da área.
