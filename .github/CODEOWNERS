@@ -1,0 +1,29 @@
+# CODEOWNERS - revisão obrigatória por área
+#
+# IMPORTANTE: trocar os placeholders abaixo pelos handles reais do GitHub
+# (não os nomes completos). O Rondineli vai completar antes do primeiro merge.
+#
+# Divisão fechada na Sprint 0:
+#   backend  -> William + Victor
+#   frontend -> Helio + Luis Felipe + Renan
+#   infra    -> Rondineli + Akira
+#   ci/cd    -> Akira
+
+# Fallback: Tech Lead revisa qualquer coisa fora dos padrões específicos
+*                        @rondineli-handle
+
+# Backend
+/backend/                @william-handle @victor-handle
+
+# Frontend
+/frontend/               @helio-handle @luisfelipe-handle @renan-handle
+
+# Infra (containers, migrations, variáveis de ambiente)
+/docker-compose.yml      @rondineli-handle @AkiraGitDev
+/backend/prisma/         @rondineli-handle @AkiraGitDev
+/backend/.env.example    @rondineli-handle @AkiraGitDev
+
+# CI/CD e configs de workspace
+/.github/                @AkiraGitDev
+/package.json            @AkiraGitDev @rondineli-handle
+/package-lock.json       @AkiraGitDev @rondineli-handle

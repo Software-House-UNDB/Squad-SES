@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+coverage
+.next
+.vercel
+*.lock
+package-lock.json
+backend/prisma/migrations
