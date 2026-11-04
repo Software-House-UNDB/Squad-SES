@@ -10,6 +10,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   changes:
     name: Detectar mudanças
@@ -104,10 +108,12 @@ jobs:
     steps:
       - name: Verifica resultado dos jobs
         run: |
-          if [[ "${{ needs.backend.result }}" == "failure" || "${{ needs.frontend.result }}" == "failure" ]]; then
-            echo "Algum job falhou"; exit 1
+          if [[ "${{ needs.changes.result }}" != "success" ]]; then
+            echo "Job 'changes' falhou: ${{ needs.changes.result }}"; exit 1
           fi
-          if [[ "${{ needs.backend.result }}" == "cancelled" || "${{ needs.frontend.result }}" == "cancelled" ]]; then
-            echo "Algum job foi cancelado"; exit 1
-          fi
+          for result in "${{ needs.backend.result }}" "${{ needs.frontend.result }}"; do
+            if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
+              echo "Algum job de build/test falhou: $result"; exit 1
+            fi
+          done
           echo "OK"
