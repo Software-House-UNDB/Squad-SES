@@ -1,14 +1,23 @@
-import { Plus, SquarePen, Eye, Share2, Trash2, ArrowDownUp } from 'lucide-react'
-import Badge from '../../components/ui/Badge.jsx'
-import IconButton from '../../components/ui/IconButton.jsx'
-import { STATUS_LABEL, STATUS_VARIANT } from '../../data/mockOficios.js'
-import './oficios.css'
+import { Plus, SquarePen, Eye, Share2, Trash2, ArrowDownUp } from 'lucide-react';
+import Badge from '../../components/ui/Badge.tsx';
+import IconButton from '../../components/ui/IconButton.tsx';
+import { STATUS_LABEL, STATUS_VARIANT, type Oficio } from '../../data/mockOficios.ts';
+import './oficios.css';
 
-const COLUMNS = ['N° do Ofício', 'Supervisor', 'Data', 'Status', 'Operador', 'ETA']
+interface OficiosTableProps {
+  oficios: Oficio[];
+  onView: (oficio: Oficio) => void;
+}
 
-export default function OficiosTable({ oficios, onView }) {
+const COLUMNS = ['N° do Ofício', 'Supervisor', 'Data', 'Status', 'Operador', 'ETA'];
+
+export default function OficiosTable({ oficios, onView }: OficiosTableProps) {
   if (oficios.length === 0) {
-    return <div className="oficios-table__empty">Nenhum ofício encontrado para os filtros selecionados.</div>
+    return (
+      <div className="oficios-table__empty">
+        Nenhum ofício encontrado para os filtros selecionados.
+      </div>
+    );
   }
 
   return (
@@ -42,7 +51,12 @@ export default function OficiosTable({ oficios, onView }) {
                 <div className="oficios-table__actions">
                   <IconButton icon={Plus} label="Adicionar" disabled />
                   <IconButton icon={SquarePen} label="Editar" disabled />
-                  <IconButton icon={Eye} label="Analisar ofício" variant="primary" onClick={() => onView(oficio)} />
+                  <IconButton
+                    icon={Eye}
+                    label="Analisar ofício"
+                    variant="primary"
+                    onClick={() => onView(oficio)}
+                  />
                   <IconButton icon={Share2} label="Compartilhar" disabled />
                   <IconButton icon={Trash2} label="Excluir" variant="danger" disabled />
                 </div>
@@ -52,5 +66,5 @@ export default function OficiosTable({ oficios, onView }) {
         </tbody>
       </table>
     </div>
-  )
+  );
 }

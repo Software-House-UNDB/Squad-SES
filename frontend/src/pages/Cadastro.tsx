@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import AuthLayout from '../components/AuthLayout.jsx'
-import '../styles/forms.css'
+import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import AuthLayout from '../components/AuthLayout.tsx';
+import '../styles/forms.css';
 
 const initialForm = {
   nome: '',
@@ -9,61 +9,63 @@ const initialForm = {
   matricula: '',
   senha: '',
   confirmarSenha: '',
-}
+};
+
+type FormErrors = Partial<Record<keyof typeof initialForm, string>>;
 
 export default function Cadastro() {
-  const navigate = useNavigate()
-  const [form, setForm] = useState(initialForm)
-  const [errors, setErrors] = useState({})
-  const [submitting, setSubmitting] = useState(false)
+  const navigate = useNavigate();
+  const [form, setForm] = useState(initialForm);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleChange(event) {
-    const { name, value } = event.target
-    setForm((prev) => ({ ...prev, [name]: value }))
+  function handleChange(event: ChangeEvent<HTMLInputElement>) {
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   }
 
   function validate() {
-    const nextErrors = {}
+    const nextErrors: FormErrors = {};
 
     if (!form.nome.trim()) {
-      nextErrors.nome = 'Informe seu nome completo.'
+      nextErrors.nome = 'Informe seu nome completo.';
     }
 
     if (!form.email.trim()) {
-      nextErrors.email = 'Informe seu e-mail institucional.'
+      nextErrors.email = 'Informe seu e-mail institucional.';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      nextErrors.email = 'Digite um e-mail válido.'
+      nextErrors.email = 'Digite um e-mail válido.';
     }
 
     if (!form.matricula.trim()) {
-      nextErrors.matricula = 'Informe sua matrícula.'
+      nextErrors.matricula = 'Informe sua matrícula.';
     }
 
     if (!form.senha) {
-      nextErrors.senha = 'Crie uma senha.'
+      nextErrors.senha = 'Crie uma senha.';
     } else if (form.senha.length < 6) {
-      nextErrors.senha = 'A senha deve ter ao menos 6 caracteres.'
+      nextErrors.senha = 'A senha deve ter ao menos 6 caracteres.';
     }
 
     if (!form.confirmarSenha) {
-      nextErrors.confirmarSenha = 'Confirme sua senha.'
+      nextErrors.confirmarSenha = 'Confirme sua senha.';
     } else if (form.confirmarSenha !== form.senha) {
-      nextErrors.confirmarSenha = 'As senhas não coincidem.'
+      nextErrors.confirmarSenha = 'As senhas não coincidem.';
     }
 
-    setErrors(nextErrors)
-    return Object.keys(nextErrors).length === 0
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   }
 
-  function handleSubmit(event) {
-    event.preventDefault()
-    if (!validate()) return
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!validate()) return;
 
-    setSubmitting(true)
+    setSubmitting(true);
     setTimeout(() => {
-      setSubmitting(false)
-      navigate('/cadastro/sucesso', { state: { email: form.email } })
-    }, 500)
+      setSubmitting(false);
+      navigate('/cadastro/sucesso', { state: { email: form.email } });
+    }, 500);
   }
 
   return (
@@ -150,5 +152,5 @@ export default function Cadastro() {
         </p>
       </form>
     </AuthLayout>
-  )
+  );
 }

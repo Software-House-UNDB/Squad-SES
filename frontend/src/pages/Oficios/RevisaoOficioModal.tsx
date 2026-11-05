@@ -1,34 +1,42 @@
-import { useState } from 'react'
-import { Building2, Layers, Users, Download } from 'lucide-react'
-import Modal from '../../components/ui/Modal.jsx'
-import Tabs from '../../components/ui/Tabs.jsx'
-import './oficios.css'
+import { useState, type ReactNode } from 'react';
+import { Building2, Layers, Users, Download } from 'lucide-react';
+import Modal from '../../components/ui/Modal.tsx';
+import Tabs, { type TabItem } from '../../components/ui/Tabs.tsx';
+import type {
+  Grupo,
+  Oficio,
+  UnidadeOficio,
+  EstruturaEstagio as Estrutura,
+} from '../../data/mockOficios.ts';
+import './oficios.css';
 
-const TABS = [
+type RevisaoTab = 'unidade' | 'estrutura' | 'grupos';
+
+const TABS: TabItem<RevisaoTab>[] = [
   { value: 'unidade', label: 'Dados de Unidade', icon: Building2 },
   { value: 'estrutura', label: 'Estrutura de Estágio', icon: Layers },
   { value: 'grupos', label: 'Grupos', icon: Users },
-]
+];
 
-function Field({ label, value }) {
+function Field({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="field">
       <span className="field__label">{label}</span>
       <span className="field__value">{value}</span>
     </div>
-  )
+  );
 }
 
-function FieldGroup({ title, children }) {
+function FieldGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="field-group">
       <p className="panel__title">{title}</p>
       <div className="field-group__grid">{children}</div>
     </div>
-  )
+  );
 }
 
-function DadosUnidade({ unidade }) {
+function DadosUnidade({ unidade }: { unidade: UnidadeOficio }) {
   return (
     <>
       <div className="panel">
@@ -46,10 +54,10 @@ function DadosUnidade({ unidade }) {
         </FieldGroup>
       </div>
     </>
-  )
+  );
 }
 
-function EstruturaEstagio({ estrutura }) {
+function EstruturaEstagio({ estrutura }: { estrutura: Estrutura }) {
   return (
     <>
       <div className="panel">
@@ -70,10 +78,10 @@ function EstruturaEstagio({ estrutura }) {
         </FieldGroup>
       </div>
     </>
-  )
+  );
 }
 
-function Grupos({ grupos }) {
+function Grupos({ grupos }: { grupos: Grupo[] }) {
   return (
     <div className="grupos">
       {grupos.map((grupo) => (
@@ -92,15 +100,27 @@ function Grupos({ grupos }) {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 /**
  * Modal de revisão do ofício — "Revisão de Dados do Ofício" no Figma.
  * Decide entre abrir o passo de aprovação ou o de reprovação.
  */
-export default function RevisaoOficioModal({ oficio, onClose, onRequestApprove, onRequestReject }) {
-  const [activeTab, setActiveTab] = useState('unidade')
+interface RevisaoOficioModalProps {
+  oficio: Oficio;
+  onClose: () => void;
+  onRequestApprove: () => void;
+  onRequestReject: () => void;
+}
+
+export default function RevisaoOficioModal({
+  oficio,
+  onClose,
+  onRequestApprove,
+  onRequestReject,
+}: RevisaoOficioModalProps) {
+  const [activeTab, setActiveTab] = useState<RevisaoTab>('unidade');
 
   return (
     <Modal
@@ -139,5 +159,5 @@ export default function RevisaoOficioModal({ oficio, onClose, onRequestApprove, 
         </div>
       </div>
     </Modal>
-  )
+  );
 }

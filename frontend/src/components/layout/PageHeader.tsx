@@ -1,7 +1,14 @@
-import './PageHeader.css'
+import type { LucideIcon } from 'lucide-react';
+import './PageHeader.css';
+
+interface PageHeaderProps {
+  icon?: LucideIcon;
+  title: string;
+  breadcrumb?: string[];
+}
 
 /** Cabeçalho padrão das páginas internas: ícone + título + trilha de navegação. */
-export default function PageHeader({ icon: Icon, title, breadcrumb }) {
+export default function PageHeader({ icon: Icon, title, breadcrumb }: PageHeaderProps) {
   return (
     <div className="page-header">
       <div className="page-header__title-row">
@@ -14,5 +21,5 @@ export default function PageHeader({ icon: Icon, title, breadcrumb }) {
       </div>
       {breadcrumb && <p className="page-header__breadcrumb">{breadcrumb.join('  /  ')}</p>}
     </div>
-  )
+  );
 }

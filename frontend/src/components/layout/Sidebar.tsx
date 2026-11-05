@@ -1,7 +1,7 @@
-import { NavLink } from 'react-router-dom'
-import { FileText, Pen, User, Settings } from 'lucide-react'
-import Logo from '../Logo.jsx'
-import './Sidebar.css'
+import { NavLink } from 'react-router-dom';
+import { FileText, Pen, User, Settings } from 'lucide-react';
+import Logo from '../Logo.tsx';
+import './Sidebar.css';
 
 const NAV_SECTIONS = [
   {
@@ -18,7 +18,7 @@ const NAV_SECTIONS = [
       { to: '/administracao/configuracoes', label: 'Configurações', icon: Settings },
     ],
   },
-]
+];
 
 export default function Sidebar() {
   return (
@@ -35,7 +35,9 @@ export default function Sidebar() {
               <NavLink
                 key={to}
                 to={to}
-                className={({ isActive }) => `sidebar__item ${isActive ? 'sidebar__item--active' : ''}`}
+                className={({ isActive }) =>
+                  `sidebar__item ${isActive ? 'sidebar__item--active' : ''}`
+                }
               >
                 <Icon size={17} strokeWidth={2} />
                 {label}
@@ -45,5 +47,5 @@ export default function Sidebar() {
         ))}
       </nav>
     </aside>
-  )
+  );
 }

@@ -1,12 +1,12 @@
-import { useLocation, useNavigate } from 'react-router-dom'
-import AuthLayout from '../components/AuthLayout.jsx'
-import '../styles/forms.css'
-import './CadastroSucesso.css'
+import { useLocation, useNavigate } from 'react-router-dom';
+import AuthLayout from '../components/AuthLayout.tsx';
+import '../styles/forms.css';
+import './CadastroSucesso.css';
 
 export default function CadastroSucesso() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const email = location.state?.email
+  const navigate = useNavigate();
+  const location = useLocation();
+  const email = (location.state as { email?: string } | null)?.email;
 
   return (
     <AuthLayout>
@@ -29,14 +29,10 @@ export default function CadastroSucesso() {
           {email ? <strong>{email}</strong> : 'seu endereço institucional'}.
         </p>
 
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => navigate('/login')}
-        >
+        <button type="button" className="btn btn-primary" onClick={() => navigate('/login')}>
           Acessar o Sistema
         </button>
       </div>
     </AuthLayout>
-  )
+  );
 }
