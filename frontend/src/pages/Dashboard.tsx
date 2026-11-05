@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import Logo from '../components/Logo.jsx'
+import Logo from '../components/Logo.tsx'
 import './Dashboard.css'
 
 export default function Dashboard() {

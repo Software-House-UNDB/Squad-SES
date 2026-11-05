@@ -1,18 +1,27 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import './ui.css'
+
+interface ModalProps {
+  title: string
+  subtitle?: string
+  size?: 'md' | 'lg'
+  onClose: () => void
+  footer?: ReactNode
+  children: ReactNode
+}
 
 /**
  * Diálogo modal genérico. `size`: 'md' (padrão) | 'lg' (telas com abas/tabela).
  * `footer` recebe os botões de ação; `children` é o conteúdo do corpo.
  */
-export default function Modal({ title, subtitle, size = 'md', onClose, footer, children }) {
-  const closeButtonRef = useRef(null)
+export default function Modal({ title, subtitle, size = 'md', onClose, footer, children }: ModalProps) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     closeButtonRef.current?.focus()
 
-    function handleKeyDown(event) {
+    function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') onClose()
     }
 

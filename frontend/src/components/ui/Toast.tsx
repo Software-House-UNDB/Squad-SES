@@ -2,19 +2,37 @@ import { useEffect } from 'react'
 import { CircleCheck, CircleX, X } from 'lucide-react'
 import './ui.css'
 
+export type ToastVariant = 'approved' | 'rejected'
+
+interface ToastProps {
+  variant: ToastVariant
+  title: string
+  message: string
+  onUndo?: () => void
+  onClose: () => void
+  duration?: number
+}
+
 const ICON = {
   approved: CircleCheck,
   rejected: CircleX,
-}
+} satisfies Record<ToastVariant, unknown>
 
 /** Notificação flutuante com opção de desfazer a ação. Some sozinha após `duration` ms. */
-export default function Toast({ variant, title, message, onUndo, onClose, duration = 6000 }) {
+export default function Toast({
+  variant,
+  title,
+  message,
+  onUndo,
+  onClose,
+  duration = 6000,
+}: ToastProps) {
   useEffect(() => {
     const timer = setTimeout(onClose, duration)
     return () => clearTimeout(timer)
   }, [onClose, duration])
 
-  const Icon = ICON[variant] ?? CircleCheck
+  const Icon = ICON[variant]
 
   return (
     <div className={`toast toast--${variant}`} role="status">

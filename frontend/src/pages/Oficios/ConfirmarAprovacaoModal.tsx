@@ -1,9 +1,16 @@
 import { TriangleAlert } from 'lucide-react'
-import Modal from '../../components/ui/Modal.jsx'
+import Modal from '../../components/ui/Modal.tsx'
+import type { Oficio } from '../../data/mockOficios.ts'
 import './oficios.css'
 
+interface ConfirmarAprovacaoModalProps {
+  oficio: Oficio
+  onBack: () => void
+  onConfirm: () => void
+}
+
 /** Passo de confirmação antes de efetivar a aprovação — ação irreversível. */
-export default function ConfirmarAprovacaoModal({ oficio, onBack, onConfirm }) {
+export default function ConfirmarAprovacaoModal({ oficio, onBack, onConfirm }: ConfirmarAprovacaoModalProps) {
   return (
     <Modal
       title="Confirmar aprovação do ofício"

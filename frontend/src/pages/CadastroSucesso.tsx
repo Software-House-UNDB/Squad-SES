@@ -1,12 +1,12 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import AuthLayout from '../components/AuthLayout.jsx'
+import AuthLayout from '../components/AuthLayout.tsx'
 import '../styles/forms.css'
 import './CadastroSucesso.css'
 
 export default function CadastroSucesso() {
   const navigate = useNavigate()
   const location = useLocation()
-  const email = location.state?.email
+  const email = (location.state as { email?: string } | null)?.email
 
   return (
     <AuthLayout>

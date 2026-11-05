@@ -1,3 +1,5 @@
+import type { BadgeVariant } from '../components/ui/Badge.tsx'
+
 // Dados fictícios para o fluxo de Análise de Ofícios.
 // Substituir pela integração com a API assim que o back-end expuser o recurso.
 
@@ -6,17 +8,65 @@ export const STATUS = {
   APROVADO: 'aprovado',
   REPROVADO: 'reprovado',
   ENCERRADO: 'encerrado',
+} as const
+
+export type OficioStatus = (typeof STATUS)[keyof typeof STATUS]
+
+export interface Aluno {
+  nome: string
+  cpf: string
+  matricula: string
 }
 
-export const STATUS_LABEL = {
+export interface Grupo {
+  nome: string
+  alunos: Aluno[]
+}
+
+export interface UnidadeOficio {
+  concedente: string
+  setor: string
+  periodoInicio: string
+  periodoFim: string
+  seguro: { apolice: string; seguradora: string; vencimento: string }
+}
+
+export interface EstruturaEstagio {
+  grupos: number
+  alunos: number
+  turno: string
+  diasSemana: string
+  horario: string
+  periodoInicio: string
+  periodoFim: string
+  semanas: number
+  cargaSemanal: string
+  cargaTotal: string
+}
+
+export interface Oficio {
+  id: string
+  numero: string
+  supervisor: string
+  data: string
+  status: OficioStatus
+  operador: string
+  eta: string
+  unidade: UnidadeOficio
+  estrutura: EstruturaEstagio
+  grupos: Grupo[]
+  motivoReprovacao: string | null
+}
+
+export const STATUS_LABEL: Record<OficioStatus, string> = {
   [STATUS.EM_ANDAMENTO]: 'Em andamento',
   [STATUS.APROVADO]: 'Aprovado',
   [STATUS.REPROVADO]: 'Reprovado',
   [STATUS.ENCERRADO]: 'Encerrado',
 }
 
-// Variante visual usada pelo componente <Badge> — ver src/components/ui/Badge.jsx
-export const STATUS_VARIANT = {
+// Variante visual usada pelo componente <Badge> — ver src/components/ui/Badge.tsx
+export const STATUS_VARIANT: Record<OficioStatus, BadgeVariant> = {
   [STATUS.EM_ANDAMENTO]: 'pending',
   [STATUS.APROVADO]: 'approved',
   [STATUS.REPROVADO]: 'rejected',
@@ -44,11 +94,11 @@ const ALUNOS_POOL = [
 const TURNOS = ['Matutino', 'Vespertino', 'Noturno']
 const OPERADOR = 'Guilherme Ferreira dos Reis'
 
-function pad(n) {
+function pad(n: number) {
   return String(n).padStart(3, '0')
 }
 
-function buildOficio(index) {
+function buildOficio(index: number): Oficio {
   const numero = `OF-2025-${101 + index}`
   const statusCycle = [
     STATUS.EM_ANDAMENTO,
@@ -104,4 +154,4 @@ function buildOficio(index) {
   }
 }
 
-export const mockOficios = Array.from({ length: 24 }, (_, i) => buildOficio(i))
+export const mockOficios: Oficio[] = Array.from({ length: 24 }, (_, i) => buildOficio(i))

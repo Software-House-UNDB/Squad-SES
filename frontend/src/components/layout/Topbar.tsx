@@ -5,7 +5,11 @@ import './Topbar.css'
 // TODO: substituir pelos dados do usuário autenticado quando a sessão existir.
 const PLACEHOLDER_USER = { name: 'Débora Vieira', initials: 'DV' }
 
-export default function Topbar({ user = PLACEHOLDER_USER }) {
+interface TopbarProps {
+  user?: { name: string; initials: string }
+}
+
+export default function Topbar({ user = PLACEHOLDER_USER }: TopbarProps) {
   const navigate = useNavigate()
 
   return (

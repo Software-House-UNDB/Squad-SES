@@ -1,25 +1,36 @@
 import { useMemo, useState } from 'react'
 import { FileText, Search } from 'lucide-react'
-import PageHeader from '../../components/layout/PageHeader.jsx'
-import Tabs from '../../components/ui/Tabs.jsx'
-import Chip from '../../components/ui/Chip.jsx'
-import Pagination from '../../components/ui/Pagination.jsx'
-import Toast from '../../components/ui/Toast.jsx'
-import OficiosTable from './OficiosTable.jsx'
-import RevisaoOficioModal from './RevisaoOficioModal.jsx'
-import ConfirmarAprovacaoModal from './ConfirmarAprovacaoModal.jsx'
-import ReprovarOficioModal from './ReprovarOficioModal.jsx'
-import { mockOficios, STATUS, STATUS_LABEL } from '../../data/mockOficios.js'
+import PageHeader from '../../components/layout/PageHeader.tsx'
+import Tabs, { type TabItem } from '../../components/ui/Tabs.tsx'
+import Chip from '../../components/ui/Chip.tsx'
+import Pagination from '../../components/ui/Pagination.tsx'
+import Toast, { type ToastVariant } from '../../components/ui/Toast.tsx'
+import OficiosTable from './OficiosTable.tsx'
+import RevisaoOficioModal from './RevisaoOficioModal.tsx'
+import ConfirmarAprovacaoModal from './ConfirmarAprovacaoModal.tsx'
+import ReprovarOficioModal from './ReprovarOficioModal.tsx'
+import { mockOficios, STATUS, STATUS_LABEL, type Oficio, type OficioStatus } from '../../data/mockOficios.ts'
 import './oficios.css'
 
 const PAGE_SIZE = 8
 
-const TABS = [
+type ListTab = 'progresso' | 'finalizados'
+type StatusFilter = 'todos' | OficioStatus
+type Stage = 'review' | 'approve' | 'reject' | null
+
+interface ToastState {
+  variant: ToastVariant
+  title: string
+  message: string
+  undo: () => void
+}
+
+const TABS: TabItem<ListTab>[] = [
   { value: 'progresso', label: 'Ofícios em Progresso' },
   { value: 'finalizados', label: 'Ofícios Finalizados' },
 ]
 
-const CHIPS = [
+const CHIPS: { value: StatusFilter; label: string }[] = [
   { value: 'todos', label: 'Todos' },
   { value: STATUS.EM_ANDAMENTO, label: STATUS_LABEL[STATUS.EM_ANDAMENTO] },
   { value: STATUS.APROVADO, label: STATUS_LABEL[STATUS.APROVADO] },
@@ -28,15 +39,15 @@ const CHIPS = [
 ]
 
 export default function OficiosLista() {
-  const [oficios, setOficios] = useState(mockOficios)
-  const [activeTab, setActiveTab] = useState('progresso')
-  const [statusFilter, setStatusFilter] = useState('todos')
+  const [oficios, setOficios] = useState<Oficio[]>(mockOficios)
+  const [activeTab, setActiveTab] = useState<ListTab>('progresso')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('todos')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
 
-  const [selectedId, setSelectedId] = useState(null)
-  const [stage, setStage] = useState(null) // null | 'review' | 'approve' | 'reject'
-  const [toast, setToast] = useState(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [stage, setStage] = useState<Stage>(null)
+  const [toast, setToast] = useState<ToastState | null>(null)
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -58,14 +69,14 @@ export default function OficiosLista() {
 
   const selectedOficio = oficios.find((o) => o.id === selectedId) ?? null
 
-  function updateFilterAnd(setter) {
-    return (value) => {
+  function updateFilterAnd<T>(setter: (value: T) => void) {
+    return (value: T) => {
       setter(value)
       setPage(1)
     }
   }
 
-  function handleView(oficio) {
+  function handleView(oficio: Oficio) {
     setSelectedId(oficio.id)
     setStage('review')
   }
@@ -76,6 +87,7 @@ export default function OficiosLista() {
   }
 
   function handleConfirmApprove() {
+    if (!selectedOficio) return
     const previousStatus = selectedOficio.status
     const numero = selectedOficio.numero
     const id = selectedOficio.id
@@ -90,7 +102,8 @@ export default function OficiosLista() {
     })
   }
 
-  function handleConfirmReject(motivo) {
+  function handleConfirmReject(motivo: string) {
+    if (!selectedOficio) return
     const previousStatus = selectedOficio.status
     const numero = selectedOficio.numero
     const id = selectedOficio.id

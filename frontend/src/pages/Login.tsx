@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import AuthLayout from '../components/AuthLayout.jsx'
+import AuthLayout from '../components/AuthLayout.tsx'
 import '../styles/forms.css'
 
 const initialForm = {
@@ -14,19 +14,21 @@ const DEMO_USER = {
   senha: 'Espma@2026',
 }
 
+type FormErrors = Partial<Record<keyof typeof initialForm | 'credenciais', string>>
+
 export default function Login() {
   const navigate = useNavigate()
   const [form, setForm] = useState(initialForm)
-  const [errors, setErrors] = useState({})
+  const [errors, setErrors] = useState<FormErrors>({})
   const [submitting, setSubmitting] = useState(false)
 
-  function handleChange(event) {
+  function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const { name, value } = event.target
     setForm((prev) => ({ ...prev, [name]: value }))
   }
 
   function validate() {
-    const nextErrors = {}
+    const nextErrors: FormErrors = {}
 
     if (!form.email.trim()) {
       nextErrors.email = 'Informe seu e-mail institucional.'
@@ -42,7 +44,7 @@ export default function Login() {
     return Object.keys(nextErrors).length === 0
   }
 
-  function handleSubmit(event) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!validate()) return
 

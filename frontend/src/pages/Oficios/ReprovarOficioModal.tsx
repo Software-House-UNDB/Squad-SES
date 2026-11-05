@@ -1,10 +1,17 @@
 import { useState } from 'react'
-import Modal from '../../components/ui/Modal.jsx'
+import Modal from '../../components/ui/Modal.tsx'
 import '../../styles/forms.css'
+import type { Oficio } from '../../data/mockOficios.ts'
 import './oficios.css'
 
+interface ReprovarOficioModalProps {
+  oficio: Oficio
+  onClose: () => void
+  onConfirm: (motivo: string) => void
+}
+
 /** Passo de reprovação — exige o motivo antes de confirmar. */
-export default function ReprovarOficioModal({ oficio, onClose, onConfirm }) {
+export default function ReprovarOficioModal({ oficio, onClose, onConfirm }: ReprovarOficioModalProps) {
   const [motivo, setMotivo] = useState('')
   const [touched, setTouched] = useState(false)
 

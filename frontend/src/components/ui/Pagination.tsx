@@ -1,13 +1,21 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import './ui.css'
 
-function getPageNumbers(page, pageCount) {
+function getPageNumbers(page: number, pageCount: number) {
   const pages = new Set([1, pageCount, page, page - 1, page + 1])
   return [...pages].filter((p) => p >= 1 && p <= pageCount).sort((a, b) => a - b)
 }
 
+interface PaginationProps {
+  page: number
+  pageCount: number
+  total: number
+  pageSize: number
+  onPageChange: (page: number) => void
+}
+
 /** Paginação numérica com reticências para intervalos longos. */
-export default function Pagination({ page, pageCount, total, pageSize, onPageChange }) {
+export default function Pagination({ page, pageCount, total, pageSize, onPageChange }: PaginationProps) {
   if (pageCount <= 1) return null
 
   const firstItem = (page - 1) * pageSize + 1

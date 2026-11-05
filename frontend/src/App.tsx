@@ -1,12 +1,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Pen, User, Settings } from 'lucide-react'
-import Login from './pages/Login.jsx'
-import Cadastro from './pages/Cadastro.jsx'
-import CadastroSucesso from './pages/CadastroSucesso.jsx'
-import Dashboard from './pages/Dashboard.jsx'
-import AppShell from './components/layout/AppShell.jsx'
-import OficiosLista from './pages/Oficios/OficiosLista.jsx'
-import Placeholder from './pages/Placeholder.jsx'
+import Login from './pages/Login.tsx'
+import Cadastro from './pages/Cadastro.tsx'
+import CadastroSucesso from './pages/CadastroSucesso.tsx'
+import Dashboard from './pages/Dashboard.tsx'
+import AppShell from './components/layout/AppShell.tsx'
+import OficiosLista from './pages/Oficios/OficiosLista.tsx'
+import Placeholder from './pages/Placeholder.tsx'
 
 export default function App() {
   return (

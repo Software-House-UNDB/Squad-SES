@@ -1,10 +1,23 @@
+import type { LucideIcon } from 'lucide-react'
 import './ui.css'
+
+export interface TabItem<T extends string = string> {
+  value: T
+  label: string
+  icon?: LucideIcon
+}
+
+interface TabsProps<T extends string> {
+  items: TabItem<T>[]
+  value: T
+  onChange: (value: T) => void
+}
 
 /**
  * Abas simples controladas pelo componente pai.
  * `items`: [{ value, label, icon: Component }]
  */
-export default function Tabs({ items, value, onChange }) {
+export default function Tabs<T extends string>({ items, value, onChange }: TabsProps<T>) {
   return (
     <div className="tabs" role="tablist">
       {items.map((item) => {

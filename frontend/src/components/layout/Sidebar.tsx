@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { FileText, Pen, User, Settings } from 'lucide-react'
-import Logo from '../Logo.jsx'
+import Logo from '../Logo.tsx'
 import './Sidebar.css'
 
 const NAV_SECTIONS = [

@@ -1,12 +1,17 @@
 import { Plus, SquarePen, Eye, Share2, Trash2, ArrowDownUp } from 'lucide-react'
-import Badge from '../../components/ui/Badge.jsx'
-import IconButton from '../../components/ui/IconButton.jsx'
-import { STATUS_LABEL, STATUS_VARIANT } from '../../data/mockOficios.js'
+import Badge from '../../components/ui/Badge.tsx'
+import IconButton from '../../components/ui/IconButton.tsx'
+import { STATUS_LABEL, STATUS_VARIANT, type Oficio } from '../../data/mockOficios.ts'
 import './oficios.css'
+
+interface OficiosTableProps {
+  oficios: Oficio[]
+  onView: (oficio: Oficio) => void
+}
 
 const COLUMNS = ['N° do Ofício', 'Supervisor', 'Data', 'Status', 'Operador', 'ETA']
 
-export default function OficiosTable({ oficios, onView }) {
+export default function OficiosTable({ oficios, onView }: OficiosTableProps) {
   if (oficios.length === 0) {
     return <div className="oficios-table__empty">Nenhum ofício encontrado para os filtros selecionados.</div>
   }
