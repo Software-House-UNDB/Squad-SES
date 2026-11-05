@@ -4,6 +4,6 @@ import { ProcessosService } from './processos.service.js';
 
 @Module({
   controllers: [ProcessosController],
-  providers: [ProcessosService]
+  providers: [ProcessosService],
 })
 export class ProcessosModule {}

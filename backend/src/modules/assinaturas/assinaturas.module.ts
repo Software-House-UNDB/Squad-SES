@@ -4,6 +4,6 @@ import { AssinaturasService } from './assinaturas.service.js';
 
 @Module({
   controllers: [AssinaturasController],
-  providers: [AssinaturasService]
+  providers: [AssinaturasService],
 })
 export class AssinaturasModule {}

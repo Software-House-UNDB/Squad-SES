@@ -4,6 +4,6 @@ import { DocumentosService } from './documentos.service.js';
 
 @Module({
   controllers: [DocumentosController],
-  providers: [DocumentosService]
+  providers: [DocumentosService],
 })
 export class DocumentosModule {}
