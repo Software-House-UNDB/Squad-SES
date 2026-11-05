@@ -1,16 +1,16 @@
-import type { LucideIcon } from 'lucide-react'
-import './ui.css'
+import type { LucideIcon } from 'lucide-react';
+import './ui.css';
 
 export interface TabItem<T extends string = string> {
-  value: T
-  label: string
-  icon?: LucideIcon
+  value: T;
+  label: string;
+  icon?: LucideIcon;
 }
 
 interface TabsProps<T extends string> {
-  items: TabItem<T>[]
-  value: T
-  onChange: (value: T) => void
+  items: TabItem<T>[];
+  value: T;
+  onChange: (value: T) => void;
 }
 
 /**
@@ -21,8 +21,8 @@ export default function Tabs<T extends string>({ items, value, onChange }: TabsP
   return (
     <div className="tabs" role="tablist">
       {items.map((item) => {
-        const isSelected = item.value === value
-        const Icon = item.icon
+        const isSelected = item.value === value;
+        const Icon = item.icon;
         return (
           <button
             key={item.value}
@@ -35,8 +35,8 @@ export default function Tabs<T extends string>({ items, value, onChange }: TabsP
             {Icon && <Icon size={16} strokeWidth={2} />}
             {item.label}
           </button>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

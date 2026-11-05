@@ -1,22 +1,22 @@
-import { useEffect } from 'react'
-import { CircleCheck, CircleX, X } from 'lucide-react'
-import './ui.css'
+import { useEffect } from 'react';
+import { CircleCheck, CircleX, X } from 'lucide-react';
+import './ui.css';
 
-export type ToastVariant = 'approved' | 'rejected'
+export type ToastVariant = 'approved' | 'rejected';
 
 interface ToastProps {
-  variant: ToastVariant
-  title: string
-  message: string
-  onUndo?: () => void
-  onClose: () => void
-  duration?: number
+  variant: ToastVariant;
+  title: string;
+  message: string;
+  onUndo?: () => void;
+  onClose: () => void;
+  duration?: number;
 }
 
 const ICON = {
   approved: CircleCheck,
   rejected: CircleX,
-} satisfies Record<ToastVariant, unknown>
+} satisfies Record<ToastVariant, unknown>;
 
 /** Notificação flutuante com opção de desfazer a ação. Some sozinha após `duration` ms. */
 export default function Toast({
@@ -28,11 +28,11 @@ export default function Toast({
   duration = 6000,
 }: ToastProps) {
   useEffect(() => {
-    const timer = setTimeout(onClose, duration)
-    return () => clearTimeout(timer)
-  }, [onClose, duration])
+    const timer = setTimeout(onClose, duration);
+    return () => clearTimeout(timer);
+  }, [onClose, duration]);
 
-  const Icon = ICON[variant]
+  const Icon = ICON[variant];
 
   return (
     <div className={`toast toast--${variant}`} role="status">
@@ -46,9 +46,14 @@ export default function Toast({
           Desfazer
         </button>
       )}
-      <button type="button" className="toast__close" onClick={onClose} aria-label="Fechar notificação">
+      <button
+        type="button"
+        className="toast__close"
+        onClick={onClose}
+        aria-label="Fechar notificação"
+      >
         <X size={16} />
       </button>
     </div>
-  )
+  );
 }

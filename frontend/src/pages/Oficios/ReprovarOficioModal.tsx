@@ -1,28 +1,32 @@
-import { useState } from 'react'
-import Modal from '../../components/ui/Modal.tsx'
-import '../../styles/forms.css'
-import type { Oficio } from '../../data/mockOficios.ts'
-import './oficios.css'
+import { useState } from 'react';
+import Modal from '../../components/ui/Modal.tsx';
+import '../../styles/forms.css';
+import type { Oficio } from '../../data/mockOficios.ts';
+import './oficios.css';
 
 interface ReprovarOficioModalProps {
-  oficio: Oficio
-  onClose: () => void
-  onConfirm: (motivo: string) => void
+  oficio: Oficio;
+  onClose: () => void;
+  onConfirm: (motivo: string) => void;
 }
 
 /** Passo de reprovação — exige o motivo antes de confirmar. */
-export default function ReprovarOficioModal({ oficio, onClose, onConfirm }: ReprovarOficioModalProps) {
-  const [motivo, setMotivo] = useState('')
-  const [touched, setTouched] = useState(false)
+export default function ReprovarOficioModal({
+  oficio,
+  onClose,
+  onConfirm,
+}: ReprovarOficioModalProps) {
+  const [motivo, setMotivo] = useState('');
+  const [touched, setTouched] = useState(false);
 
-  const isValid = motivo.trim().length > 0
+  const isValid = motivo.trim().length > 0;
 
   function handleConfirm() {
     if (!isValid) {
-      setTouched(true)
-      return
+      setTouched(true);
+      return;
     }
-    onConfirm(motivo.trim())
+    onConfirm(motivo.trim());
   }
 
   return (
@@ -51,8 +55,10 @@ export default function ReprovarOficioModal({ oficio, onClose, onConfirm }: Repr
           onChange={(e) => setMotivo(e.target.value)}
           onBlur={() => setTouched(true)}
         />
-        {touched && !isValid && <span className="form-error">Informe o motivo antes de reprovar.</span>}
+        {touched && !isValid && (
+          <span className="form-error">Informe o motivo antes de reprovar.</span>
+        )}
       </div>
     </Modal>
-  )
+  );
 }

@@ -1,13 +1,13 @@
-import type { LucideIcon } from 'lucide-react'
-import './ui.css'
+import type { LucideIcon } from 'lucide-react';
+import './ui.css';
 
 interface IconButtonProps {
-  icon: LucideIcon
-  label: string
-  onClick?: () => void
-  variant?: 'default' | 'primary' | 'danger'
-  size?: number
-  disabled?: boolean
+  icon: LucideIcon;
+  label: string;
+  onClick?: () => void;
+  variant?: 'default' | 'primary' | 'danger';
+  size?: number;
+  disabled?: boolean;
 }
 
 /** Botão só-ícone, usado nas ações de linha da tabela e nos cabeçalhos de modal. */
@@ -30,5 +30,5 @@ export default function IconButton({
     >
       <Icon size={size} strokeWidth={2} />
     </button>
-  )
+  );
 }

@@ -1,17 +1,22 @@
-import { useState, type ReactNode } from 'react'
-import { Building2, Layers, Users, Download } from 'lucide-react'
-import Modal from '../../components/ui/Modal.tsx'
-import Tabs, { type TabItem } from '../../components/ui/Tabs.tsx'
-import type { Grupo, Oficio, UnidadeOficio, EstruturaEstagio as Estrutura } from '../../data/mockOficios.ts'
-import './oficios.css'
+import { useState, type ReactNode } from 'react';
+import { Building2, Layers, Users, Download } from 'lucide-react';
+import Modal from '../../components/ui/Modal.tsx';
+import Tabs, { type TabItem } from '../../components/ui/Tabs.tsx';
+import type {
+  Grupo,
+  Oficio,
+  UnidadeOficio,
+  EstruturaEstagio as Estrutura,
+} from '../../data/mockOficios.ts';
+import './oficios.css';
 
-type RevisaoTab = 'unidade' | 'estrutura' | 'grupos'
+type RevisaoTab = 'unidade' | 'estrutura' | 'grupos';
 
 const TABS: TabItem<RevisaoTab>[] = [
   { value: 'unidade', label: 'Dados de Unidade', icon: Building2 },
   { value: 'estrutura', label: 'Estrutura de Estágio', icon: Layers },
   { value: 'grupos', label: 'Grupos', icon: Users },
-]
+];
 
 function Field({ label, value }: { label: string; value: string | number }) {
   return (
@@ -19,7 +24,7 @@ function Field({ label, value }: { label: string; value: string | number }) {
       <span className="field__label">{label}</span>
       <span className="field__value">{value}</span>
     </div>
-  )
+  );
 }
 
 function FieldGroup({ title, children }: { title: string; children: ReactNode }) {
@@ -28,7 +33,7 @@ function FieldGroup({ title, children }: { title: string; children: ReactNode })
       <p className="panel__title">{title}</p>
       <div className="field-group__grid">{children}</div>
     </div>
-  )
+  );
 }
 
 function DadosUnidade({ unidade }: { unidade: UnidadeOficio }) {
@@ -49,7 +54,7 @@ function DadosUnidade({ unidade }: { unidade: UnidadeOficio }) {
         </FieldGroup>
       </div>
     </>
-  )
+  );
 }
 
 function EstruturaEstagio({ estrutura }: { estrutura: Estrutura }) {
@@ -73,7 +78,7 @@ function EstruturaEstagio({ estrutura }: { estrutura: Estrutura }) {
         </FieldGroup>
       </div>
     </>
-  )
+  );
 }
 
 function Grupos({ grupos }: { grupos: Grupo[] }) {
@@ -95,7 +100,7 @@ function Grupos({ grupos }: { grupos: Grupo[] }) {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 /**
@@ -103,10 +108,10 @@ function Grupos({ grupos }: { grupos: Grupo[] }) {
  * Decide entre abrir o passo de aprovação ou o de reprovação.
  */
 interface RevisaoOficioModalProps {
-  oficio: Oficio
-  onClose: () => void
-  onRequestApprove: () => void
-  onRequestReject: () => void
+  oficio: Oficio;
+  onClose: () => void;
+  onRequestApprove: () => void;
+  onRequestReject: () => void;
 }
 
 export default function RevisaoOficioModal({
@@ -115,7 +120,7 @@ export default function RevisaoOficioModal({
   onRequestApprove,
   onRequestReject,
 }: RevisaoOficioModalProps) {
-  const [activeTab, setActiveTab] = useState<RevisaoTab>('unidade')
+  const [activeTab, setActiveTab] = useState<RevisaoTab>('unidade');
 
   return (
     <Modal
@@ -154,5 +159,5 @@ export default function RevisaoOficioModal({
         </div>
       </div>
     </Modal>
-  )
+  );
 }

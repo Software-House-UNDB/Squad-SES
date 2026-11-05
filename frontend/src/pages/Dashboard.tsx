@@ -1,9 +1,9 @@
-import { useNavigate } from 'react-router-dom'
-import Logo from '../components/Logo.tsx'
-import './Dashboard.css'
+import { useNavigate } from 'react-router-dom';
+import Logo from '../components/Logo.tsx';
+import './Dashboard.css';
 
 export default function Dashboard() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   return (
     <div className="dashboard">
@@ -16,5 +16,5 @@ export default function Dashboard() {
         </button>
       </div>
     </div>
-  )
+  );
 }

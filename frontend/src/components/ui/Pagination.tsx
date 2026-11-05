@@ -1,26 +1,32 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import './ui.css'
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import './ui.css';
 
 function getPageNumbers(page: number, pageCount: number) {
-  const pages = new Set([1, pageCount, page, page - 1, page + 1])
-  return [...pages].filter((p) => p >= 1 && p <= pageCount).sort((a, b) => a - b)
+  const pages = new Set([1, pageCount, page, page - 1, page + 1]);
+  return [...pages].filter((p) => p >= 1 && p <= pageCount).sort((a, b) => a - b);
 }
 
 interface PaginationProps {
-  page: number
-  pageCount: number
-  total: number
-  pageSize: number
-  onPageChange: (page: number) => void
+  page: number;
+  pageCount: number;
+  total: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 }
 
 /** Paginação numérica com reticências para intervalos longos. */
-export default function Pagination({ page, pageCount, total, pageSize, onPageChange }: PaginationProps) {
-  if (pageCount <= 1) return null
+export default function Pagination({
+  page,
+  pageCount,
+  total,
+  pageSize,
+  onPageChange,
+}: PaginationProps) {
+  if (pageCount <= 1) return null;
 
-  const firstItem = (page - 1) * pageSize + 1
-  const lastItem = Math.min(page * pageSize, total)
-  const pageNumbers = getPageNumbers(page, pageCount)
+  const firstItem = (page - 1) * pageSize + 1;
+  const lastItem = Math.min(page * pageSize, total);
+  const pageNumbers = getPageNumbers(page, pageCount);
 
   return (
     <div className="pagination">
@@ -40,8 +46,8 @@ export default function Pagination({ page, pageCount, total, pageSize, onPageCha
         </button>
 
         {pageNumbers.map((num, i) => {
-          const prev = pageNumbers[i - 1]
-          const showEllipsis = prev !== undefined && num - prev > 1
+          const prev = pageNumbers[i - 1];
+          const showEllipsis = prev !== undefined && num - prev > 1;
           return (
             <span key={num} style={{ display: 'contents' }}>
               {showEllipsis && <span className="pagination__ellipsis">…</span>}
@@ -54,7 +60,7 @@ export default function Pagination({ page, pageCount, total, pageSize, onPageCha
                 {num}
               </button>
             </span>
-          )
+          );
         })}
 
         <button
@@ -68,5 +74,5 @@ export default function Pagination({ page, pageCount, total, pageSize, onPageCha
         </button>
       </div>
     </div>
-  )
+  );
 }

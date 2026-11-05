@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react'
-import Logo from './Logo.tsx'
-import loginBg from '../assets/login-bg.jpg'
-import logoSh from '../assets/logo-sh.png'
-import logoEspma from '../assets/logo-espma.png'
-import './AuthLayout.css'
+import type { ReactNode } from 'react';
+import Logo from './Logo.tsx';
+import loginBg from '../assets/login-bg.jpg';
+import logoSh from '../assets/logo-sh.png';
+import logoEspma from '../assets/logo-espma.png';
+import './AuthLayout.css';
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
@@ -27,5 +27,5 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         </div>
       </div>
     </div>
-  )
+  );
 }

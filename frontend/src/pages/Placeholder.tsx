@@ -1,11 +1,11 @@
-import type { LucideIcon } from 'lucide-react'
-import PageHeader from '../components/layout/PageHeader.tsx'
-import './Placeholder.css'
+import type { LucideIcon } from 'lucide-react';
+import PageHeader from '../components/layout/PageHeader.tsx';
+import './Placeholder.css';
 
 interface PlaceholderProps {
-  icon: LucideIcon
-  title: string
-  breadcrumb: string[]
+  icon: LucideIcon;
+  title: string;
+  breadcrumb: string[];
 }
 
 /** Tela reservada para seções do menu que ainda não têm fluxo implementado. */
@@ -17,5 +17,5 @@ export default function Placeholder({ icon, title, breadcrumb }: PlaceholderProp
         <p>Esta seção ainda não foi implementada.</p>
       </div>
     </>
-  )
+  );
 }
