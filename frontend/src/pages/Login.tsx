@@ -1,6 +1,10 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout.tsx';
+import { useAuth } from '../auth/useAuth.ts';
+import { homeFor } from '../routes/permissions.ts';
+import { getErrorMessage } from '../services/api.ts';
+import { DEMO_USER, isAuthMock } from '../services/authService.ts';
 import '../styles/forms.css';
 
 const initialForm = {
@@ -8,16 +12,16 @@ const initialForm = {
   senha: '',
 };
 
-// Credencial fixa para a demonstração aos stakeholders. Remover quando a autenticação real for integrada.
-const DEMO_USER = {
-  email: 'coordenacao@espma.edu.br',
-  senha: 'Espma@2026',
-};
-
 type FormErrors = Partial<Record<keyof typeof initialForm | 'credenciais', string>>;
 
+interface LocationState {
+  from?: { pathname: string };
+}
+
 export default function Login() {
-  const navigate = useNavigate();
+  const { usuario, login } = useAuth();
+  const location = useLocation();
+  const from = (location.state as LocationState | null)?.from?.pathname;
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -44,25 +48,21 @@ export default function Login() {
     return Object.keys(nextErrors).length === 0;
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!validate()) return;
 
     setSubmitting(true);
-    setTimeout(() => {
+    try {
+      // Em caso de sucesso o usuário passa a existir e este componente redireciona (ver abaixo).
+      await login({ email: form.email.trim(), senha: form.senha });
+    } catch (error) {
+      setErrors({ credenciais: getErrorMessage(error, 'E-mail ou senha inválidos.') });
       setSubmitting(false);
-
-      const credentialsMatch =
-        form.email.trim().toLowerCase() === DEMO_USER.email && form.senha === DEMO_USER.senha;
-
-      if (!credentialsMatch) {
-        setErrors({ credenciais: 'E-mail ou senha inválidos.' });
-        return;
-      }
-
-      navigate('/gerenciamento/analise-oficios');
-    }, 500);
+    }
   }
+
+  if (usuario) return <Navigate to={from ?? homeFor(usuario.perfil)} replace />;
 
   return (
     <AuthLayout>
@@ -70,14 +70,18 @@ export default function Login() {
         <h1 className="auth-form__title">Entrar</h1>
         <p className="auth-form__subtitle">Acesse sua conta institucional</p>
 
-        <div className="auth-form__demo-hint">
-          <strong>Acesso de demonstração</strong>
-          <span>{DEMO_USER.email}</span>
-          <span>{DEMO_USER.senha}</span>
-        </div>
+        {isAuthMock() && (
+          <div className="auth-form__demo-hint">
+            <strong>Acesso de demonstração</strong>
+            <span>{DEMO_USER.email}</span>
+            <span>{DEMO_USER.senha}</span>
+          </div>
+        )}
 
         {errors.credenciais && (
-          <p className="form-error form-error--general">{errors.credenciais}</p>
+          <p className="form-error form-error--general" role="alert">
+            {errors.credenciais}
+          </p>
         )}
 
         <div className={`form-field ${errors.email ? 'has-error' : ''}`}>

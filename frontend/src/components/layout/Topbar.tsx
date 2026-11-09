@@ -1,5 +1,6 @@
 import { Bell, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../auth/useAuth.ts';
 import './Topbar.css';
 
 // TODO: substituir pelos dados do usuário autenticado quando a sessão existir.
@@ -11,6 +12,7 @@ interface TopbarProps {
 
 export default function Topbar({ user = PLACEHOLDER_USER }: TopbarProps) {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   return (
     <header className="topbar">
@@ -27,7 +29,10 @@ export default function Topbar({ user = PLACEHOLDER_USER }: TopbarProps) {
           className="topbar__logout"
           title="Sair"
           aria-label="Sair"
-          onClick={() => navigate('/login')}
+          onClick={() => {
+            logout();
+            navigate('/login', { replace: true });
+          }}
         >
           <LogOut size={18} strokeWidth={2} />
         </button>
