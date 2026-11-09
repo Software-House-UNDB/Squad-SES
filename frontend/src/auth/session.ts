@@ -1,5 +1,7 @@
 import type { Tokens, Usuario } from '../types/auth.ts';
 
+// MVP: refresh token em localStorage. Ticket de hardening para Sprint 4
+// migra para cookie httpOnly (requer CORS com credentials e proxy em dev).
 const ACCESS_KEY = 'ses:access-token';
 const REFRESH_KEY = 'ses:refresh-token';
 const USER_KEY = 'ses:usuario';
