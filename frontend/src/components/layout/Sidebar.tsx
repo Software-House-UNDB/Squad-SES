@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { X } from 'lucide-react';
 import Logo from '../Logo.tsx';
@@ -13,6 +14,13 @@ interface SidebarProps {
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const { usuario } = useAuth();
+  const closeButton = useRef<HTMLButtonElement>(null);
+
+  // Ao abrir a gaveta, o foco entra no menu (começa no botão de fechar).
+  useEffect(() => {
+    if (open) closeButton.current?.focus();
+  }, [open]);
+
   if (!usuario) return null;
 
   return (
@@ -25,7 +33,13 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       <aside id="menu-principal" className={`sidebar ${open ? 'sidebar--open' : ''}`}>
         <div className="sidebar__brand">
           <Logo size="sm" />
-          <button type="button" className="sidebar__close" aria-label="Fechar menu" onClick={onClose}>
+          <button
+            ref={closeButton}
+            type="button"
+            className="sidebar__close"
+            aria-label="Fechar menu"
+            onClick={onClose}
+          >
             <X size={20} />
           </button>
         </div>
@@ -51,7 +65,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <p className="sidebar__profile">{PERFIL_LABEL[usuario.perfil]}</p>
+        <div className="sidebar__profile">
+          <span className="sidebar__profile-email">{usuario.email}</span>
+          <span>{PERFIL_LABEL[usuario.perfil]}</span>
+          {usuario.instituicao && <span>{usuario.instituicao}</span>}
+        </div>
       </aside>
     </>
   );

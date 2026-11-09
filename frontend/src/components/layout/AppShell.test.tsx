@@ -23,7 +23,7 @@ describe('shell da área autenticada', () => {
       'Usuários',
       'Configurações',
     ]);
-    expect(screen.getByText('f@x.com')).toBeInTheDocument();
+    expect(screen.getByText('f@x.com', { selector: '.topbar__email' })).toBeInTheDocument();
     expect(screen.getByText(/Coordenação SES/, { selector: '.topbar__role' })).toBeInTheDocument();
   });
 
@@ -43,6 +43,46 @@ describe('shell da área autenticada', () => {
       'aria-current',
       'page',
     );
+  });
+
+  it('o menu também mostra e-mail, perfil e instituição (visíveis no mobile)', () => {
+    loginAs('representante_ies');
+    renderApp('/dashboard');
+
+    const aside = screen.getByRole('complementary');
+    expect(within(aside).getByText('f@x.com')).toBeInTheDocument();
+    expect(within(aside).getByText('Representante da IES')).toBeInTheDocument();
+    expect(within(aside).getByText('UNDB')).toBeInTheDocument();
+  });
+
+  describe('gaveta do menu', () => {
+    it('foca o menu ao abrir e devolve o foco ao botão ao fechar com Esc', async () => {
+      loginAs('coordenacao_ses');
+      renderApp('/dashboard');
+
+      const abrir = screen.getByRole('button', { name: 'Abrir menu' });
+      await userEvent.click(abrir);
+      expect(screen.getByRole('button', { name: 'Fechar menu' })).toHaveFocus();
+      expect(abrir).toHaveAttribute('aria-expanded', 'true');
+
+      await userEvent.keyboard('{Escape}');
+      expect(abrir).toHaveFocus();
+      expect(abrir).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('mantém o Tab dentro do menu enquanto está aberto', async () => {
+      loginAs('representante_ies');
+      renderApp('/dashboard');
+      await userEvent.click(screen.getByRole('button', { name: 'Abrir menu' }));
+
+      // Elementos do menu: Fechar menu e Início. O Tab seguinte volta ao primeiro, sem sair do menu.
+      await userEvent.tab();
+      expect(screen.getByRole('link', { name: 'Início' })).toHaveFocus();
+      await userEvent.tab();
+      expect(screen.getByRole('button', { name: 'Fechar menu' })).toHaveFocus();
+      await userEvent.tab({ shift: true });
+      expect(screen.getByRole('link', { name: 'Início' })).toHaveFocus();
+    });
   });
 
   it('sair encerra a sessão e volta ao login', async () => {
