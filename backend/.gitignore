@@ -1,0 +1,5 @@
+# Cliente gerado por `npm run prisma:generate`
+/src/generated/
+
+# Cache incremental do TypeScript
+*.tsbuildinfo

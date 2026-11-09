@@ -1,0 +1,336 @@
+{{!-- Modelo: TERMO DE COMPROMISSO ESTÁGIO E PÓS.docx, com grafia e concordância corrigidas. As
+imagens ficam em assets/, com caminho relativo a este arquivo: o HTML precisa ser aberto a partir
+desta pasta. --}}
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Termo de Compromisso de Estágio</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      body {
+        margin: 0;
+        font-family: 'Times New Roman', Times, serif;
+        font-size: 9pt;
+        line-height: 1.15;
+        color: #000;
+      }
+      /* position: fixed repete o timbre em todas as páginas do PDF */
+      .timbre {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 210mm;
+        height: 296mm;
+        background: url('assets/fundo.jpg') top left / 210mm 297mm no-repeat;
+      }
+      .cabecalho {
+        position: absolute;
+        top: 1cm;
+        left: 3cm;
+        right: 2.5cm;
+        text-align: center;
+        font-family: 'Open Sans', Arial, sans-serif;
+        font-size: 11pt;
+        line-height: 1.2;
+      }
+      .cabecalho img {
+        display: block;
+        height: 1.6cm;
+        margin: 0 auto 0.1cm;
+      }
+      .rodape {
+        position: absolute;
+        bottom: 0.7cm;
+        left: 1.5cm;
+        right: 1cm;
+        display: flex;
+        align-items: center;
+        gap: 0.5cm;
+        font-family: Signika, Arial, sans-serif;
+        font-size: 9pt;
+        line-height: 1.2;
+        color: #223a81;
+      }
+      .rodape img {
+        height: 1.4cm;
+      }
+      .rodape div {
+        flex: 1;
+      }
+      /* thead e tfoot vazios reservam as margens em todas as páginas */
+      .pagina {
+        position: relative;
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .pagina td {
+        padding: 0 2.5cm 0 3cm;
+      }
+      .espaco-topo {
+        height: 4.5cm;
+      }
+      .espaco-base {
+        height: 2.5cm;
+      }
+      h1 {
+        font-size: 9pt;
+        text-align: center;
+        margin: 0;
+      }
+      h2 {
+        font-size: 9pt;
+        margin: 0.9em 0 0;
+        break-after: avoid;
+      }
+      .centro {
+        text-align: center;
+        margin-bottom: 0.9em;
+      }
+      .clausula {
+        text-decoration: underline;
+      }
+      p {
+        margin: 0;
+        text-align: justify;
+      }
+      .assinaturas {
+        break-inside: avoid;
+        margin-top: 3em;
+      }
+      .assinaturas > p {
+        text-align: center;
+      }
+      .assinatura {
+        break-inside: avoid;
+        margin-top: 3.5em;
+      }
+      .assinatura p {
+        text-align: center;
+      }
+      .linha {
+        border-top: 1px solid #000;
+        margin: 0 28%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="timbre">
+      <div class="cabecalho">
+        <img src="assets/brasao.png" alt="" />
+        <strong>GOVERNO DO MARANHÃO</strong><br />
+        Secretaria de Estado da Saúde do Maranhão<br />
+        Escola de Saúde Pública do Estado do Maranhão
+      </div>
+      <div class="rodape">
+        <img src="assets/logo-espma.jpg" alt="ESP/MA" />
+        <div>
+          Governo do Maranhão<br />
+          Secretaria de Estado da Saúde<br />
+          Escola de Saúde Pública do Estado do Maranhão
+        </div>
+        <div>
+          Rua da Estrela, nº 415, Centro Histórico,<br />
+          São Luís - MA | Fone: (98) 3232-3233<br />
+          escoladesaudepublica.ma@gmail.com
+        </div>
+      </div>
+    </div>
+
+    <table class="pagina">
+      <thead>
+        <tr>
+          <td><div class="espaco-topo"></div></td>
+        </tr>
+      </thead>
+      <tfoot>
+        <tr>
+          <td><div class="espaco-base"></div></td>
+        </tr>
+      </tfoot>
+      <tbody>
+        <tr>
+          <td>
+            <h1>TERMO DE COMPROMISSO DE ESTÁGIO OBRIGATÓRIO E PÓS-GRADUAÇÃO</h1>
+            <h1 class="centro">INSTITUIÇÃO CONCEDENTE</h1>
+            <p>
+              A <strong>SECRETARIA DE ESTADO DA SAÚDE,</strong> pessoa jurídica de direito público
+              interno, inscrita no CNPJ sob o nº. 02.973.240/0001-06 com sede na Avenida Carlos
+              Cunha, s/nº, Calhau, nesta Cidade, Brasil representado pelo seu Secretário
+              <strong>SR. {{secretario_nome}}</strong>, pessoa jurídica de Direito Pública, neste
+              ato representada pela Direção da Unidade de Saúde ou Chefia de Departamento da
+              Secretaria Estadual de Saúde.
+            </p>
+
+            <h2>INSTITUIÇÃO DE ENSINO (IE)</h2>
+            <p>
+              O (A) {{ie_nome}}, CNPJ N° {{ie_cnpj}}, Situada no (a) {{ie_endereco}}, {{ie_cidade}}
+              – {{ie_uf}} CEP: {{ie_cep}}.
+              <strong>
+                Neste ato representado por seu representante legal abaixo identificado pelo (a)
+                {{ie_representante_cargo}} {{ie_representante_nome}}.
+              </strong>
+              CPF: {{ie_representante_cpf}}, RG {{ie_representante_rg}}.
+            </p>
+
+            <h2>ESTAGIÁRIO (A): <span style="font-weight: normal">{{nome}}</span></h2>
+            <p>
+              Aluno (a) regulamente matriculado no curso de {{curso}}, matrícula {{matricula}},
+              CPF: {{cpf}}, residente e domiciliado na cidade/UF de {{cidade}}/{{uf}}, CEP: {{cep}}
+            </p>
+
+            <h2>
+              PELO PRESENTE DOCUMENTO, AS PARTES ACIMA IDENTIFICADAS FIRMAM TERMO DE COMPROMISSO DE:
+            </h2>
+            <p>({{#if is_obrigatorio}} X {{else}} {{/if}}) Estágio Obrigatório;</p>
+            <p>({{#if is_pos_graduacao}} X {{else}} {{/if}}) Pós-Graduação;</p>
+
+            <h2>OS QUAIS SERÃO REGIDOS PELAS CONDIÇÕES E CLÁUSULAS A SEGUIR:</h2>
+
+            <h2 class="clausula">CLÁUSULA PRIMEIRA – DO OBJETO</h2>
+            <p>
+              Este instrumento tem por objetivo estabelecer as condições para a realização de
+              Estágio e particularizar a relação jurídica especial existente entre o ESTAGIÁRIO, a
+              CONCEDENTE e a INSTITUIÇÃO DE ENSINO, tudo conforme o disposto na Lei n. 11.788/2008.
+            </p>
+
+            <h2 class="clausula">CLÁUSULA SEGUNDA – DO OBJETO</h2>
+            <p>
+              O presente estágio terá duração de: INÍCIO: {{data_inicio}} e TÉRMINO:
+              {{data_termino}}
+            </p>
+            <p>
+              Horário: das {{horario_inicio}} às {{horario_fim}}. Total de horas semanais:
+              {{horas_semanais}}.
+            </p>
+
+            <h2 class="clausula">CLÁUSULA TERCEIRA – CONDIÇÕES DO TERMO DE COMPROMISSO</h2>
+            <p>
+              Parágrafo Primeiro: As atividades de ensino e aprendizagem oferecidas pela Instituição
+              Concedente são direcionadas aos ESTÁGIOS CURRICULARES OBRIGATÓRIOS E PÓS-GRADUAÇÃO.
+            </p>
+            <p>
+              Parágrafo Segundo: O (A) estagiário (a) não terá por força deste termo de compromisso,
+              qualquer vínculo trabalhista com a Unidade Concedente.
+            </p>
+            <p>
+              Parágrafo Terceiro: Os casos omissos, oriundos da relação entre a Concedente e o
+              Estagiário em decorrência do presente termo, será solucionado pela DIREÇÃO da
+              Unidade de Saúde juntamente com a Coordenação de Estágio da Escola de Saúde Pública do
+              Estado do Maranhão.
+            </p>
+
+            <h2 class="clausula">CLÁUSULA QUARTA – DAS OBRIGAÇÕES DA CONCEDENTE</h2>
+            <p><strong>Cabe à Concedente:</strong></p>
+            <p>
+              a) receber, analisar e autorizar as solicitações de campos de estágios obrigatórios ou
+              de pós-graduação formuladas pelas Instituições de Ensino, às quais serão processadas
+              pela ordem de entrega;
+            </p>
+            <p>
+              b) coordenar e monitorar o desenvolvimento dos estágios obrigatórios e pós-graduação
+              ofertadas pela SES/MA;
+            </p>
+            <p>c) supervisionar os campos de estágios;</p>
+            <p>
+              d) supervisionar o cumprimento das determinações da Portaria SES/MA n° 726/2021 e
+              Portaria SES/MA n° 263/2021;
+            </p>
+            <p>
+              e) compete ao Diretor/Gestor da unidade (campo de estágio) cumprir e fazer cumprir o
+              que rege as Portarias vigentes.
+            </p>
+
+            <h2 class="clausula">CLÁUSULA QUINTA – DAS OBRIGAÇÕES DA INSTITUIÇÃO DE ENSINO</h2>
+            <p><strong>Compete à Instituição de Ensino:</strong></p>
+            <p>
+              a) garantir a presença diária do professor preceptor indicado para cada grupo de
+              alunos, nos turnos e horários respectivos, para o acompanhamento das atividades
+              realizadas pelos estagiários;
+            </p>
+            <p>b) cumprir a contrapartida decorrente do exercício do convênio;</p>
+            <p>
+              c) apresentar junto ao termo de compromisso de estágio, devidamente assinado pelas
+              partes e seus representantes legais, a relação nominal dos estagiários e o número da
+              apólice de seguro em 1 (uma) via, 15 (quinze) dias antes do início do estágio, sob
+              pena de inviabilizar o início do estágio;
+            </p>
+            <p>
+              d) compatibilizar o horário de estágio com o horário de funcionamento das unidades
+              administrativas e unidades de saúde da Secretaria de Estado da Saúde do Maranhão -
+              SES/MA;
+            </p>
+            <p>e) providenciar a identificação do estagiário e preceptores, por meio de crachá;</p>
+            <p>
+              f) zelar pela observância dos alunos quanto às normas internas das unidades da SES/MA,
+              relativas à disciplina, segurança do trabalho e biossegurança;
+            </p>
+            <p>
+              g) orientar os estagiários para que tenham sua conduta pautada nos termos do que
+              dispõe o Código de Ética Profissional;
+            </p>
+            <p>
+              h) ofertar às unidades da Secretaria de Estado da Saúde os materiais de proteção
+              individual dos estagiários e preceptores, que serão utilizados na execução das
+              atividades práticas, quando for o caso;
+            </p>
+            <p>
+              i) caso haja necessidade de retificar a solicitação apresentada à ESP/MA, a mesma
+              deverá ocorrer no mínimo com 3 (três) úteis de antecedência ao início das
+              atividades.
+            </p>
+
+            <h2 class="clausula">CLÁUSULA SEXTA – DAS OBRIGAÇÕES DO ESTAGIÁRIO</h2>
+            <p>
+              O ESTAGIÁRIO se obriga a cumprir todas as normas internas da CONCEDENTE e da
+              Instituição de Ensino, principalmente aquelas relativas ao ESTÁGIO que o ESTUDANTE
+              declara expressamente conhecer e se obriga a:
+            </p>
+            <p>
+              a) cumprir a programação estabelecida observando as normas e regulamentos internos da
+              Unidade, assim como as normas de segurança do trabalho, apresentando-se no local de
+              estágio adequadamente uniformizados e portando crachá, de forma que sejam identificados.
+            </p>
+            <p>
+              b) informar de imediato e por escrito à Unidade e Coordenação de Estágio, qualquer
+              fato que interrompa, suspenda ou cancele sua matrícula junto à Instituição de Ensino;
+            </p>
+            <p>
+              c) ao término do estágio apresentar relatório de frequência, de atividades e de
+              avaliação para IE,
+            </p>
+            <p>
+              d) cumprir todas as normas e diretrizes previstas no manual de estágio e demais
+              diretrizes e regulamentos da IE.
+            </p>
+
+            <div class="assinaturas">
+              <p>São Luís (MA), {{dia}} de {{mes}} de {{ano}}.</p>
+              <div class="assinatura">
+                <div class="linha"></div>
+                <p>Representante da Instituição de Ensino<br />Assinatura</p>
+              </div>
+              <div class="assinatura">
+                <div class="linha"></div>
+                <p>
+                  Representante da Concedente - Escola de Saúde Pública do Maranhão<br />Assinatura
+                </p>
+              </div>
+              <div class="assinatura">
+                <div class="linha"></div>
+                <p>Assinatura do Supervisor</p>
+              </div>
+              <div class="assinatura">
+                <div class="linha"></div>
+                <p>Assinatura do Estagiário</p>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>
