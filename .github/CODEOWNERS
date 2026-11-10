@@ -1,16 +1,13 @@
 # CODEOWNERS - revisão obrigatória por área
 #
-# TODO: substituir @rondineli-handle pelo handle real do GitHub do Rondineli
-# antes de ligar a branch protection com "Require review from Code Owners".
-#
 # Divisão fechada na Sprint 0:
 #   backend  -> William (@wirsokk) + Victor (@vikviktorr)
 #   frontend -> Helio (@heliolevi) + Luis Felipe (@luiscstro) + Renan (@rspgameplay-ui)
-#   infra    -> Rondineli + Akira (@AkiraGitDev)
+#   infra    -> Rondineli (@rondiseba) + Akira (@AkiraGitDev)
 #   ci/cd    -> Akira (@AkiraGitDev)
 
 # Fallback: Tech Lead revisa qualquer coisa fora dos padrões específicos
-*                        @rondineli-handle
+*                        @rondiseba
 
 # Backend
 /backend/                @wirsokk @vikviktorr
@@ -19,11 +16,11 @@
 /frontend/               @heliolevi @luiscstro @rspgameplay-ui
 
 # Infra (containers, migrations, variáveis de ambiente)
-/docker-compose.yml      @rondineli-handle @AkiraGitDev
-/backend/prisma/         @rondineli-handle @AkiraGitDev
-/backend/.env.example    @rondineli-handle @AkiraGitDev
+/docker-compose.yml      @rondiseba @AkiraGitDev
+/backend/prisma/         @rondiseba @AkiraGitDev
+/backend/.env.example    @rondiseba @AkiraGitDev
 
 # CI/CD e configs de workspace
 /.github/                @AkiraGitDev
-/package.json            @AkiraGitDev @rondineli-handle
-/package-lock.json       @AkiraGitDev @rondineli-handle
+/package.json            @AkiraGitDev @rondiseba
+/package-lock.json       @AkiraGitDev @rondiseba
