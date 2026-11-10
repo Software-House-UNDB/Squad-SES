@@ -5,7 +5,7 @@
 #
 # Divisão fechada na Sprint 0:
 #   backend  -> William (@wirsokk) + Victor (@vikviktorr)
-#   frontend -> Helio (@heliolevi) + Luis Felipe (@luiscstro) + Renan (@renanpires)
+#   frontend -> Helio (@heliolevi) + Luis Felipe (@luiscstro) + Renan (@rspgameplay-ui)
 #   infra    -> Rondineli + Akira (@AkiraGitDev)
 #   ci/cd    -> Akira (@AkiraGitDev)
 
@@ -16,7 +16,7 @@
 /backend/                @wirsokk @vikviktorr
 
 # Frontend
-/frontend/               @heliolevi @luiscstro @renanpires
+/frontend/               @heliolevi @luiscstro @rspgameplay-ui
 
 # Infra (containers, migrations, variáveis de ambiente)
 /docker-compose.yml      @rondineli-handle @AkiraGitDev
