@@ -24,7 +24,7 @@ Guia pro time entender o pipeline, o monorepo e a hospedagem proposta. Qualquer 
 | Credenciais dev | `postgres/postgres`, `minioadmin/minioadmin` | Rondineli (Q20) |
 | MailHog/Mailpit | Não | Rondineli (Q22) |
 | Husky | Não | Rondineli (Q27) |
-| Hospedagem | **Vercel** (front) + **Render free** (back) + **Neon** (Postgres) + **Cloudflare R2** (storage prod) | Akira |
+| Hospedagem | **Vercel** (front) + **Render free** (back) + **Neon** (Postgres) + **Backblaze B2** (storage prod) | Akira (confirmado pelo time em 09/11) |
 
 ## Por que oxlint e não ESLint
 
@@ -38,13 +38,115 @@ Tudo em free tier. Sem custo até alguém decidir escalar.
 
 | Serviço | Papel | Plano | Nota |
 |---|---|---|---|
-| Vercel | Frontend Vite | Hobby (free) | Deploy automático por PR com preview URL |
-| Render | Backend NestJS | Free Web Service | Dorme após 15min inativo (cold start ~30s). Se virar problema na homologação (01–07/12), migrar pra Fly.io |
-| Neon | Postgres gerenciado | Free (0.5GB) | Serverless, branching por PR combina com Prisma |
-| Cloudflare R2 | Storage S3 em prod | Free (10GB + 10M req/mês) | API S3-compatível, substitui MinIO só em prod |
+| Vercel | Frontend Vite | Hobby (free) | **Provisionado 10/11 em https://squad-ses-frontend.vercel.app** · Deploy automático por push em `dev` + preview URL por PR · Sem cartão no signup · Detalhes em [Provisionamento Vercel](#vercel-provisionado-em-1011) |
+| Render | Backend NestJS | Free Web Service | Dorme após 15min inativo (cold start ~30s). Sem cartão. Substituiu Koyeb, que fechou free em fev/2026 pós-aquisição Mistral. Se cold start virar problema na homologação (01–07/12), avaliar Fly.io (exige cartão) |
+| Neon | Postgres gerenciado | Free (0.5GB) | Serverless, branching por PR combina com Prisma. Sem cartão |
+| Backblaze B2 | Storage S3 em prod | Free (10GB + egress até 3× storage médio) | API S3-compatível, substitui MinIO só em prod. **Sem cartão no signup** (R2 da Cloudflare exigia cartão — por isso trocamos pra B2 em 09/11) |
 | MinIO | Storage dev local | Container docker | Continua sendo o storage em desenvolvimento |
 
-**Impacto no docx**: o docx menciona MinIO em prod. A proposta aqui é usar R2 em prod (mesma API S3) e manter MinIO só em dev. Isso **não** muda nenhum requisito funcional nem viola a Portaria 1327 — ainda é storage S3-compatível. Precisa confirmar com Rondineli e professor.
+**Impacto no docx**: o docx menciona MinIO em prod. A proposta aqui é usar Backblaze B2 em prod (mesma API S3) e manter MinIO só em dev. Isso **não** muda nenhum requisito funcional nem viola a Portaria 1327 — ainda é storage S3-compatível. Precisa confirmar com Rondineli e professor.
+
+**Critério de escolha de todo o stack de hospedagem**: free tier real + **sem exigência de cartão de crédito no signup**, pra qualquer membro do time provisionar sem depender do cartão do Rondineli/professor. Isso descartou Koyeb (fechou free), Fly.io (exige cartão) e Cloudflare R2 (exige cartão).
+
+## Provisionamento das contas (como compartilhar credenciais)
+
+Cada serviço tem um modelo diferente de "quem é dono" e "como se compartilha acesso". Regra geral: **conta é uma, credenciais técnicas (connection strings, application keys) é que se compartilha**. Nunca compartilhar login/senha da conta owner.
+
+### Regra do email owner
+
+Ao criar qualquer conta (Neon, Render, Vercel, Backblaze), **evitar email pessoal do membro**. Se o membro sair do projeto, o recurso vai junto. Preferência, em ordem:
+
+1. Email institucional da `softwarehouseundb` (pedir pro Rondineli)
+2. Email compartilhado que já exista no time
+3. **Se não houver**, criar com email pessoal **mas passar login/senha pro Rondineli guardar como backup**
+
+### Neon (Postgres)
+
+- **Conta owner**: 1 só (quem provisionou — hoje Victor)
+- **O que se compartilha**: a *connection string* (`postgresql://user:pass@host/db`)
+- **Quem recebe**: William (backend) e Luis (fullstack, precisa pra rodar local). Frontend puro (Hélio, Renan) não recebe
+- **Também precisa**: entrar como env var `DATABASE_URL` nos secrets do Render (deploy do backend) e, mais pra frente, no CI se rodar testes de integração
+
+### Backblaze B2 (storage prod)
+
+Modelo diferente do que parece — **não é conta compartilhada**. Funciona tipo AWS:
+
+- **1 conta owner** (login + senha) — administra
+- Dentro da conta, cria **buckets** (o `ses-docs`)
+- Para app acessar, cria **Application Keys** — pares `keyID + applicationKey`, análogo a AWS access key. **Essas keys é que vão pro `.env` e pros secrets do Render**, não o login da conta
+
+**Processo pro Victor executar**:
+
+1. Criar a conta com email institucional (ver regra acima)
+2. Criar o bucket `ses-docs` (ou separar `ses-docs-dev` + `ses-docs-prod` — recomendado)
+3. Gerar 2 Application Keys separadas:
+   - `ses-dev` — escopo bucket dev, read+write — compartilhar com William e Luis
+   - `ses-prod` — escopo bucket prod, read+write — só Victor + William colocam nos secrets do Render, mais ninguém vê
+4. Variáveis que saem disso (pro `backend/.env.example` — alinhar com William):
+   - `B2_KEY_ID`
+   - `B2_APPLICATION_KEY`
+   - `B2_BUCKET_NAME`
+   - `B2_ENDPOINT` (ex: `https://s3.us-east-005.backblazeb2.com` — depende da região)
+   - `B2_REGION`
+
+B2 é S3-compatível → no NestJS usar `@aws-sdk/client-s3` apontando pro endpoint do B2. Nenhum SDK novo pra aprender.
+
+### Vercel (provisionado em 10/11)
+
+Executado pelo Akira (Scrum Master e Owner da org no GitHub) em vez do Hélio, como desbloqueio das tasks 6/13 da Sprint 0 que estavam atrasadas.
+
+- **Conta owner**: `@AkiraGitDev` (GitHub pessoal do Thiago) · plano **Hobby**
+- **Scope no Vercel**: `akiragitdev` (compartilha espaço com projetos pessoais do Thiago, mas isolado em nível de projeto)
+- **GitHub App**: instalada na org `Software-House-UNDB` com escopo **"Only select repositories" → apenas `Squad-SES`**. Não enxerga outros repos da org
+- **Projeto**: `squad-ses-frontend`
+- **URL de staging**: https://squad-ses-frontend.vercel.app
+- **Production Branch**: `dev` **temporariamente** — vai trocar pra `main` quando `main` receber a primeira promoção estável (fim da Sprint 2, ~16/11)
+- **Transferência de ownership pra Gmail compartilhado da SH**: planejada pro **fim do projeto** (dezembro/2026). Não fazer durante as sprints pra evitar risco de quebrar deploys ativos
+
+#### Configurações aplicadas no projeto Vercel
+
+Importantes pra recriar o setup ou debugar:
+
+| Campo | Valor | Por quê |
+|---|---|---|
+| Root Directory | `frontend` | Monorepo — Vercel só builda o workspace do frontend |
+| Framework Preset | Vite | Autodetectado pelo `package.json` |
+| Build Command | `npm run build` (default) | Script existente: `tsc -b && vite build` |
+| Output Directory | `dist` (default) | Padrão do Vite |
+| **Install Command (override)** | **`npm install --legacy-peer-deps`** | **Crítico.** Sem isso, build quebra por conflito peer deps Vitest 4 × Vite 8 (mesma razão do `.npmrc` do repo) |
+| Node version | 20.x (default da Hobby) | Alinhado com CI |
+
+#### Environment Variables no Vercel
+
+Prefixo `VITE_*` **vai pro bundle do browser** — qualquer um abre DevTools e vê o valor. Por isso:
+
+- **Nunca marcar como "Secret"** no Vercel — usar tipo **"Config"** (vars `VITE_*` são sempre públicas por natureza)
+- Backend secrets (`DATABASE_URL`, `JWT_SECRET`, `B2_APPLICATION_KEY`) ficam **só no Render**, nunca aqui
+- Marcar sempre nos 3 environments: Production + Preview + Development
+
+| Variável | Valor atual | Environments | Nota |
+|---|---|---|---|
+| `VITE_AUTH_MOCK` | `true` | Prod + Preview + Dev | Feature flag que ativa o login mock do `authService.ts` enquanto o backend Render não existe. Desligar (`false`) quando William entregar `POST /auth/login` + `/auth/refresh` |
+| `VITE_API_URL` | *(não setada)* | — | Pendente. Adicionar quando backend Render tiver URL real. Enquanto `VITE_AUTH_MOCK=true`, o `api.ts` usa fallback `localhost:3000` mas nunca chama a API, então não importa |
+
+**Login mock** (válido enquanto `VITE_AUTH_MOCK=true`): email `coordenacao@espma.edu.br`, senha `Espma@2026` — definido em `frontend/src/services/authService.ts`. Perfil retornado: `coordenacao_ses`.
+
+#### Risco plano Hobby (non-commercial use)
+
+Hobby do Vercel tem política de uso não-comercial. Enquanto for staging com URL `*.vercel.app` sem domínio custom, baixo risco de Vercel flaggar. **Quando bater produção com domínio `.gov.br` ou tráfego real** → migrar pra **Pro** (US$20/user/mês) ou **Cloudflare Pages** (mantém o mesmo stack Vite, free, mas exige cartão no signup).
+
+#### Trigger de redeploy após mudar env var
+
+Vercel **não** redeploya automaticamente quando env var é adicionada ou mudada. Fluxo manual:
+
+1. Vercel → `squad-ses-frontend` → aba **Deployments**
+2. No deploy mais recente (badge Production), menu `⋯` → **Redeploy**
+3. **Desmarcar "Use existing Build Cache"** — Vite inlina env vars no bundle em build time; reaproveitar cache pode manter bundle antigo sem a var nova
+4. Confirmar
+
+### Render (pendente)
+
+William cria a conta; convida Thiago + Rondineli como membros. Deploy via webhook (adicionar `RENDER_DEPLOY_HOOK` nos secrets) ou via integração GitHub App. Configurar `trust proxy` (`app.set('trust proxy', 1)`) antes do primeiro deploy.
 
 ## Estrutura do monorepo
 
@@ -96,7 +198,7 @@ Secrets provisórios (podem subir só quando os serviços forem provisionados):
 - `DATABASE_URL_STAGING` — string de conexão Neon
 - `RENDER_DEPLOY_HOOK` — URL do webhook Render
 - `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` — se for usar GH Actions pra deploy em vez do GitHub app do Vercel
-- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` — Cloudflare R2
+- `B2_APPLICATION_KEY_ID`, `B2_APPLICATION_KEY`, `B2_BUCKET_NAME`, `B2_ENDPOINT` — Backblaze B2 (via API S3-compatível; endpoint tipo `s3.<region>.backblazeb2.com`)
 
 Deploy de staging **ainda não está no `ci.yml`** — adicionar quando a hospedagem estiver provisionada. Vercel e Render preferem integração via GitHub App (instala pelo painel, não precisa de secret).
 
@@ -161,7 +263,7 @@ npm run format
 2. **Frontend em JavaScript, não TypeScript**: branches `feature/*` usam `.jsx` puro. Docx sugere TypeScript. Mantido JS por enquanto (não é bloqueador do MVP); se migrar, é tarefa de Sprint futura.
 3. **ESLint → oxlint**: Rondineli respondeu ESLint na Q3, mas o repo já usa oxlint e o `nest new` moderno também. Mantido oxlint (coerência com código existente, muito mais rápido).
 4. **Jest → Vitest**: Rondineli respondeu Jest na Q15, mas o `nest new` moderno gera Vitest por default. Mantido Vitest no backend (API compatível com Jest — `describe`, `it`, `expect` iguais). Frontend sem test runner por conflito de peer deps com Vite 8 — adicionar numa task separada.
-5. **Storage prod**: docx = MinIO; proposta = Cloudflare R2 em prod (mesma API S3), MinIO só em dev local.
+5. **Storage prod**: docx = MinIO; proposta = Backblaze B2 em prod (mesma API S3), MinIO só em dev local. *(Decisão atualizada em 09/11 — antes era Cloudflare R2, trocado por B2 porque R2 exige cartão no signup.)*
 6. **Branch protection**: planejada no docx; bloqueada pelo plano Free do GitHub (ver seção acima).
 
 ## Próximos passos (fora do PR de setup)
@@ -170,6 +272,8 @@ npm run format
 2. Decidir se o repo vira público (ou se operamos sem protection)
 3. Adicionar Prisma ao backend (migrations do schema do docx — fase 1 das entidades)
 4. Adicionar test runner no frontend (Vitest 3 compatível com Vite 8 ou Jest + babel)
-5. Provisionar Vercel + Render + Neon + R2
+5. Provisionar Render + Neon + Backblaze B2 (Vercel ✅ feito em 10/11)
 6. Adicionar deploy no `ci.yml` (ou configurar via GitHub Apps do Vercel/Render)
 7. Criar `backend/.env.example` com `DATABASE_URL`, `MINIO_*`, `JWT_SECRET`, etc.
+8. Após primeira promoção `dev` → `main` (fim Sprint 2): trocar Production Branch no Vercel de `dev` pra `main`
+9. Após William entregar `POST /auth/login`: desligar `VITE_AUTH_MOCK` no Vercel (Production + Preview) e setar `VITE_API_URL` apontando pra URL do Render
