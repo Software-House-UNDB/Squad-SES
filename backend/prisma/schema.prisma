@@ -35,28 +35,43 @@ enum TipoEstagio {
   @@map("tipo_estagio")
 }
 
+enum TipoDocumento {
+  oficio
+  oficio_alteracao
+  termo_compromisso
+  kit_estagio
+  anexo
+
+  @@map("tipo_documento")
+}
+
 model Usuario {
-  id           String     @id @default(uuid()) @db.Uuid
+  id           String      @id @default(uuid()) @db.Uuid
   nome         String
-  email        String     @unique
-  senhaHash    String     @map("senha_hash")
+  email        String      @unique
+  senhaHash    String      @map("senha_hash")
   perfil       Perfil
-  criadoEm     DateTime   @default(now()) @map("criado_em")
-  atualizadoEm DateTime   @updatedAt @map("atualizado_em")
+  instituicao  String?
+  criadoEm     DateTime    @default(now()) @map("criado_em")
+  atualizadoEm DateTime    @updatedAt @map("atualizado_em")
   processos    Processo[]
+  documentos   Documento[]
+  auditorias   Auditoria[]
 
   @@map("usuarios")
 }
 
 model Processo {
-  id           String         @id @default(uuid()) @db.Uuid
-  tipoEstagio  TipoEstagio    @map("tipo_estagio")
-  status       StatusProcesso @default(rascunho)
-  criadoPorId  String         @map("criado_por_id") @db.Uuid
-  criadoPor    Usuario        @relation(fields: [criadoPorId], references: [id], onDelete: Restrict)
-  criadoEm     DateTime       @default(now()) @map("criado_em")
-  atualizadoEm DateTime       @updatedAt @map("atualizado_em")
-  estagiarios  Estagiario[]
+  id                String         @id @default(uuid()) @db.Uuid
+  tipoEstagio       TipoEstagio    @map("tipo_estagio")
+  status            StatusProcesso @default(rascunho)
+  observacaoAnalise String?        @map("observacao_analise")
+  criadoPorId       String         @map("criado_por_id") @db.Uuid
+  criadoPor         Usuario        @relation(fields: [criadoPorId], references: [id], onDelete: Restrict)
+  criadoEm          DateTime       @default(now()) @map("criado_em")
+  atualizadoEm      DateTime       @updatedAt @map("atualizado_em")
+  estagiarios       Estagiario[]
+  documentos        Documento[]
 
   @@index([status])
   @@index([criadoPorId])
@@ -64,20 +79,69 @@ model Processo {
 }
 
 model Estagiario {
-  id           String   @id @default(uuid()) @db.Uuid
-  processoId   String   @map("processo_id") @db.Uuid
-  processo     Processo @relation(fields: [processoId], references: [id], onDelete: Restrict)
-  nome         String
-  cpf          String   @db.Char(11)
-  matricula    String
-  curso        String
-  cidade       String
-  uf           String   @db.Char(2)
-  cep          String   @db.Char(8)
-  criadoEm     DateTime @default(now()) @map("criado_em")
-  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+  id            String      @id @default(uuid()) @db.Uuid
+  processoId    String      @map("processo_id") @db.Uuid
+  processo      Processo    @relation(fields: [processoId], references: [id], onDelete: Restrict)
+  nome          String
+  cpf           String      @db.Char(11)
+  matricula     String
+  curso         String
+  cidade        String
+  uf            String      @db.Char(2)
+  cep           String      @db.Char(8)
+  tipoLiberacao String?     @map("tipo_liberacao")
+  periodo       Int?
+  dataInicio    DateTime?   @map("data_inicio") @db.Date
+  dataTermino   DateTime?   @map("data_termino") @db.Date
+  horasPorDia   Int?        @map("horas_por_dia")
+  diasSemana    String[]    @map("dias_semana")
+  horarioInicio String?     @map("horario_inicio") @db.Char(5)
+  horarioFim    String?     @map("horario_fim") @db.Char(5)
+  criadoEm      DateTime    @default(now()) @map("criado_em")
+  atualizadoEm  DateTime    @updatedAt @map("atualizado_em")
+  documentos    Documento[]
 
   @@unique([processoId, cpf])
   @@unique([processoId, matricula])
   @@map("estagiarios")
+}
+
+model Documento {
+  id           String        @id @default(uuid()) @db.Uuid
+  processoId   String        @map("processo_id") @db.Uuid
+  processo     Processo      @relation(fields: [processoId], references: [id], onDelete: Restrict)
+  estagiarioId String?       @map("estagiario_id") @db.Uuid
+  estagiario   Estagiario?   @relation(fields: [estagiarioId], references: [id], onDelete: Restrict)
+  tipo         TipoDocumento
+  nomeArquivo  String        @map("nome_arquivo")
+  mimeType     String        @map("mime_type")
+  tamanhoBytes Int           @map("tamanho_bytes")
+  hashSha256   String        @map("hash_sha256") @db.Char(64)
+  storageKey   String        @unique @map("storage_key")
+  enviadoPorId String        @map("enviado_por_id") @db.Uuid
+  enviadoPor   Usuario       @relation(fields: [enviadoPorId], references: [id], onDelete: Restrict)
+  criadoEm     DateTime      @default(now()) @map("criado_em")
+
+  @@index([processoId])
+  @@index([estagiarioId])
+  @@index([enviadoPorId])
+  @@map("documentos")
+}
+
+model Auditoria {
+  id          String   @id @default(uuid()) @db.Uuid
+  usuarioId   String?  @map("usuario_id") @db.Uuid
+  usuario     Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  acao        String
+  entidade    String
+  entidadeId  String   @map("entidade_id")
+  dadosAntes  Json?    @map("dados_antes")
+  dadosDepois Json?    @map("dados_depois")
+  ip          String?
+  criadoEm    DateTime @default(now()) @map("criado_em")
+
+  @@index([entidade, entidadeId])
+  @@index([usuarioId])
+  @@index([criadoEm])
+  @@map("auditoria")
 }

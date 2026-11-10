@@ -38,6 +38,32 @@ npm install
 npm run dev
 ```
 
+## Autenticação e rotas protegidas
+
+- `src/services/api.ts` - cliente Axios: envia o access token (JWT) e, ao receber 401, renova com o
+  refresh token e repete a requisição; se a renovação falhar, encerra a sessão.
+- `src/lib/queryClient.ts` - configuração do TanStack Query (não repete erros 4xx).
+- `src/auth/` - `AuthProvider` e `useAuth` (login, logout, perfil do usuário).
+- `src/routes/ProtectedRoute.tsx` - exige login e, opcionalmente, um dos perfis permitidos. Quem não
+  tem permissão vai para `/acesso-negado`; visitante vai para `/login` e volta à página pedida depois.
+- `src/routes/permissions.ts` - quais perfis acessam cada área e a tela inicial de cada perfil.
+
+Perfis com login no piloto: `coordenacao_ses` e `representante_ies`.
+
+### Variáveis de ambiente
+
+Copie `.env.example` para `.env`:
+
+- `VITE_API_URL` - URL base da API (padrão `http://localhost:3000`).
+- `VITE_AUTH_MOCK` - `true` usa a credencial fixa de demonstração (entra como coordenação) enquanto o
+  `POST /auth/login` não existe. Remover o mock quando a API de autenticação estiver pronta.
+
+## Testes
+
+```bash
+npm run test
+```
+
 ## Build de produção
 
 ```bash

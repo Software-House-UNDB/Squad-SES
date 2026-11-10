@@ -17,6 +17,23 @@
   padding: 28px 32px;
 }
 
+.app-shell__skip {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: 100;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.app-shell__skip:focus {
+  top: 12px;
+}
+
 @media (max-width: 640px) {
   .app-shell__content {
     padding: 20px 16px;
