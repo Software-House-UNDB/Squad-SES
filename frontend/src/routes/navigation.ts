@@ -23,6 +23,8 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: 'Gerenciamento',
+    // Itens do representante_ies (RF-02 — envio de ofícios e pacotes) entram na Sprint 1
+    // em navigation.ts e App.tsx.
     items: [
       {
         to: '/gerenciamento/analise-oficios',

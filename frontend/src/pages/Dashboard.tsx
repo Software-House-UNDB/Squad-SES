@@ -3,9 +3,10 @@ import { House } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader.tsx';
 import { useAuth } from '../auth/useAuth.ts';
 import { navFor } from '../routes/navigation.ts';
+import type { Perfil } from '../types/auth.ts';
 import './Dashboard.css';
 
-const BOAS_VINDAS = {
+const BOAS_VINDAS: Record<Perfil, string> = {
   coordenacao_ses: 'Acompanhe os ofícios enviados pelas instituições e os termos aguardando assinatura.',
   representante_ies:
     'O envio de ofícios e pacotes de documentos da sua instituição estará disponível aqui em breve.',
