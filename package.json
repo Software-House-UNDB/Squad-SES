@@ -18,6 +18,7 @@
     "db:reset": "docker compose down -v && docker compose up -d postgres minio minio-setup"
   },
   "devDependencies": {
+    "jsdom": "^26.1.0",
     "prettier": "^3.3.0"
   },
   "engines": {

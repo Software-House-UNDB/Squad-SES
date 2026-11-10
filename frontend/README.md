@@ -20,6 +20,17 @@ Front-end (React + Vite) do fluxo de login e cadastro do SAGES.
 Os dados de Ofícios em `src/data/mockOficios.js` são fictícios — substituir pela integração
 com a API assim que o recurso existir no back-end.
 
+## Design system
+
+Tailwind CSS + shadcn/ui, configurados em cima das cores e raios que já existiam em
+`src/index.css` (nada de paleta nova). Para adicionar um componente novo da shadcn:
+
+```bash
+npx shadcn@latest add <componente>
+```
+
+Os componentes caem em `src/components/ui`, com o alias `@/` apontando para `src/`.
+
 ## Rodando o projeto
 
 ```bash
