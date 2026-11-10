@@ -9,5 +9,6 @@ import { ProcessosService } from './processos.service.js';
   imports: [AuditoriaModule],
   controllers: [ProcessosController, EstagiariosController],
   providers: [ProcessosService, EstagiariosService],
+  exports: [ProcessosService],
 })
 export class ProcessosModule {}
