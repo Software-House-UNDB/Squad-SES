@@ -22,7 +22,8 @@ function montar() {
     estagiario: { findFirst: vi.fn().mockResolvedValue({ id: 'e1' }) },
     documento: {
       create: vi.fn(({ data }) => Promise.resolve({ id: 'd1', ...data })),
-      findFirst: vi.fn().mockResolvedValue(DOCUMENTO),
+      // A busca por hash é a checagem de duplicata: por padrão não acha nada.
+      findFirst: vi.fn(({ where }) => Promise.resolve('hashSha256' in where ? null : DOCUMENTO)),
       delete: vi.fn(),
     },
   };
@@ -107,6 +108,33 @@ describe('DocumentosService.enviar', () => {
       service.enviar('p1', PDF, { tipo: TipoDocumento.anexo, estagiarioId: 'e9' }, USUARIO),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(storage.enviar).not.toHaveBeenCalled();
+  });
+
+  it('responde 409 para arquivo idêntico já enviado no processo, sem tocar no storage', async () => {
+    const { tx, storage, service } = montar();
+    tx.documento.findFirst.mockResolvedValue(DOCUMENTO);
+
+    await expect(
+      service.enviar('p1', PDF, { tipo: TipoDocumento.anexo }, USUARIO),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(tx.documento.findFirst).toHaveBeenCalledWith({
+      where: { processoId: 'p1', hashSha256: calcularSha256(PDF.buffer) },
+      select: { id: true },
+    });
+    expect(storage.enviar).not.toHaveBeenCalled();
+    expect(tx.documento.create).not.toHaveBeenCalled();
+  });
+
+  it('apaga o objeto se a duplicata só aparecer dentro da transação', async () => {
+    const { tx, storage, service } = montar();
+    tx.documento.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce(DOCUMENTO);
+
+    await expect(
+      service.enviar('p1', PDF, { tipo: TipoDocumento.anexo }, USUARIO),
+    ).rejects.toBeInstanceOf(ConflictException);
+    const [chave] = storage.enviar.mock.calls[0];
+    expect(storage.remover).toHaveBeenCalledWith(chave);
+    expect(tx.documento.create).not.toHaveBeenCalled();
   });
 
   it('apaga o objeto se a gravação no banco falhar', async () => {

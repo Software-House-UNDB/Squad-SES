@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Documento, Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -51,14 +51,16 @@ export class DocumentosService {
     garantirPdf(arquivo.buffer);
     // Confere antes de subir o arquivo para não deixar objeto órfão à toa.
     await this.validarDestino(this.prisma, processoId, dto.estagiarioId, usuario);
-
     const hashSha256 = calcularSha256(arquivo.buffer);
+    await this.garantirInedito(this.prisma, processoId, hashSha256);
+
     const storageKey = `processos/${processoId}/${randomUUID()}.pdf`;
     await this.storage.enviar(storageKey, arquivo.buffer, MIME_PDF, hashSha256);
 
     try {
       const documento = await this.prisma.$transaction(async (tx) => {
         await this.validarDestino(tx, processoId, dto.estagiarioId, usuario);
+        await this.garantirInedito(tx, processoId, hashSha256);
         const documento = await tx.documento.create({
           data: {
             processoId,
@@ -133,6 +135,19 @@ export class DocumentosService {
       select: { id: true },
     });
     if (!estagiario) throw new NotFoundException('Estagiário não encontrado');
+  }
+
+  // Mesmo conteúdo no mesmo processo é reenvio (duplo clique em "enviar").
+  private async garantirInedito(
+    cliente: Prisma.TransactionClient,
+    processoId: string,
+    hashSha256: string,
+  ) {
+    const duplicado = await cliente.documento.findFirst({
+      where: { processoId, hashSha256 },
+      select: { id: true },
+    });
+    if (duplicado) throw new ConflictException('Documento já enviado neste processo');
   }
 
   private async obter(cliente: Prisma.TransactionClient, processoId: string, id: string) {
