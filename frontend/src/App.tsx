@@ -23,9 +23,9 @@ export default function App() {
 
       {/* Qualquer usuário autenticado */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-
         <Route element={<AppShell />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+
           <Route element={<ProtectedRoute perfis={ACCESS.analiseOficios} />}>
             <Route path="/gerenciamento/analise-oficios" element={<OficiosLista />} />
           </Route>

@@ -1,27 +1,46 @@
-import { useNavigate } from 'react-router-dom';
-import Logo from '../components/Logo.tsx';
+import { Link } from 'react-router-dom';
+import { House } from 'lucide-react';
+import PageHeader from '../components/layout/PageHeader.tsx';
 import { useAuth } from '../auth/useAuth.ts';
+import { navFor } from '../routes/navigation.ts';
+import type { Perfil } from '../types/auth.ts';
 import './Dashboard.css';
 
-export default function Dashboard() {
-  const navigate = useNavigate();
-  const { logout } = useAuth();
+const BOAS_VINDAS: Record<Perfil, string> = {
+  coordenacao_ses: 'Acompanhe os ofícios enviados pelas instituições e os termos aguardando assinatura.',
+  representante_ies:
+    'O envio de ofícios e pacotes de documentos da sua instituição estará disponível aqui em breve.',
+};
 
-  function handleLogout() {
-    logout();
-    navigate('/login', { replace: true });
-  }
+/** Tela inicial após o login. Os atalhos seguem o menu do perfil. */
+export default function Dashboard() {
+  const { usuario } = useAuth();
+  if (!usuario) return null;
+
+  const atalhos = navFor(usuario.perfil)
+    .flatMap((section) => section.items)
+    .filter((item) => item.to !== '/dashboard');
 
   return (
-    <div className="dashboard">
-      <div className="dashboard__card">
-        <Logo size="lg" />
-        <h1>Bem-vindo(a) ao SAGES!</h1>
-        <p>Login realizado com sucesso. Esta é uma tela de destino de exemplo.</p>
-        <button type="button" className="btn btn-primary" onClick={handleLogout}>
-          Sair
-        </button>
-      </div>
-    </div>
+    <>
+      <PageHeader icon={House} title="Bem-vindo(a) ao SAGES!" breadcrumb={['Início']} />
+
+      <section className="dashboard-card">
+        <p className="dashboard-card__text">{BOAS_VINDAS[usuario.perfil]}</p>
+
+        {atalhos.length > 0 && (
+          <ul className="dashboard-card__links">
+            {atalhos.map(({ to, label, icon: Icon }) => (
+              <li key={to}>
+                <Link to={to} className="dashboard-card__link">
+                  <Icon size={18} aria-hidden="true" />
+                  {label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
   );
 }

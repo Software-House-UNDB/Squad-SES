@@ -1,51 +1,76 @@
+import { useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { FileText, Pen, User, Settings } from 'lucide-react';
+import { X } from 'lucide-react';
 import Logo from '../Logo.tsx';
+import { useAuth } from '../../auth/useAuth.ts';
+import { navFor, PERFIL_LABEL } from '../../routes/navigation.ts';
 import './Sidebar.css';
 
-const NAV_SECTIONS = [
-  {
-    label: 'Gerenciamento',
-    items: [
-      { to: '/gerenciamento/analise-oficios', label: 'Análise de Ofícios', icon: FileText },
-      { to: '/gerenciamento/assinatura-termos', label: 'Assinatura de Termos', icon: Pen },
-    ],
-  },
-  {
-    label: 'Administração',
-    items: [
-      { to: '/administracao/usuarios', label: 'Usuários', icon: User },
-      { to: '/administracao/configuracoes', label: 'Configurações', icon: Settings },
-    ],
-  },
-];
+interface SidebarProps {
+  /** Só afeta telas estreitas, onde o menu vira uma gaveta. */
+  open: boolean;
+  onClose: () => void;
+}
 
-export default function Sidebar() {
+export default function Sidebar({ open, onClose }: SidebarProps) {
+  const { usuario } = useAuth();
+  const closeButton = useRef<HTMLButtonElement>(null);
+
+  // Ao abrir a gaveta, o foco entra no menu (começa no botão de fechar).
+  useEffect(() => {
+    if (open) closeButton.current?.focus();
+  }, [open]);
+
+  if (!usuario) return null;
+
   return (
-    <aside className="sidebar">
-      <div className="sidebar__brand">
-        <Logo size="sm" />
-      </div>
+    <>
+      <div
+        className={`sidebar-backdrop ${open ? 'sidebar-backdrop--open' : ''}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside id="menu-principal" className={`sidebar ${open ? 'sidebar--open' : ''}`}>
+        <div className="sidebar__brand">
+          <Logo size="sm" />
+          <button
+            ref={closeButton}
+            type="button"
+            className="sidebar__close"
+            aria-label="Fechar menu"
+            onClick={onClose}
+          >
+            <X size={20} />
+          </button>
+        </div>
 
-      <nav className="sidebar__nav">
-        {NAV_SECTIONS.map((section) => (
-          <div className="sidebar__section" key={section.label}>
-            <p className="sidebar__section-label">{section.label}</p>
-            {section.items.map(({ to, label, icon: Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  `sidebar__item ${isActive ? 'sidebar__item--active' : ''}`
-                }
-              >
-                <Icon size={17} strokeWidth={2} />
-                {label}
-              </NavLink>
-            ))}
-          </div>
-        ))}
-      </nav>
-    </aside>
+        <nav className="sidebar__nav" aria-label="Menu principal">
+          {navFor(usuario.perfil).map((section, i) => (
+            <div className="sidebar__section" key={section.label ?? i}>
+              {section.label && <p className="sidebar__section-label">{section.label}</p>}
+              {section.items.map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `sidebar__item ${isActive ? 'sidebar__item--active' : ''}`
+                  }
+                >
+                  <Icon size={18} strokeWidth={2} aria-hidden="true" />
+                  {label}
+                </NavLink>
+              ))}
+            </div>
+          ))}
+        </nav>
+
+        <div className="sidebar__profile">
+          <span className="sidebar__profile-email">{usuario.email}</span>
+          <span>{PERFIL_LABEL[usuario.perfil]}</span>
+          {usuario.instituicao && <span>{usuario.instituicao}</span>}
+        </div>
+      </aside>
+    </>
   );
 }

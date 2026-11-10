@@ -3,7 +3,8 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  gap: 12px;
   padding: 0 28px;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
@@ -12,36 +13,59 @@
   z-index: 10;
 }
 
-.topbar__spacer {
-  flex: 1;
+.topbar__menu {
+  display: none;
+  margin-right: auto;
 }
 
 .topbar__actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  min-width: 0;
 }
 
-.topbar__bell {
+.topbar__icon-btn {
   border: none;
   background: none;
   color: var(--color-text-muted);
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
   display: grid;
   place-items: center;
   cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
 }
 
-.topbar__bell:hover {
+.topbar__icon-btn:hover {
   background: var(--color-bg);
   color: var(--color-text);
 }
 
+.topbar__logout:hover {
+  color: var(--color-danger);
+}
+
+.topbar__icon-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.topbar__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--color-border);
+}
+
 .topbar__avatar {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
   border-radius: 999px;
   background: var(--color-primary-light);
   color: var(--color-primary-dark);
@@ -52,19 +76,51 @@
   font-weight: 700;
 }
 
-.topbar__logout {
-  border: none;
-  background: none;
-  color: var(--color-text-muted);
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
+.topbar__identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-family: var(--font-app);
+  line-height: 1.3;
 }
 
-.topbar__logout:hover {
-  background: var(--color-bg);
-  color: var(--color-danger);
+.topbar__email {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 240px;
+}
+
+.topbar__role {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 240px;
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    padding: 0 12px 0 8px;
+  }
+
+  .topbar__menu {
+    display: grid;
+  }
+}
+
+/* Em celulares só o avatar fica visível; a identidade completa fica no rodapé do menu. */
+@media (max-width: 640px) {
+  .topbar__identity {
+    display: none;
+  }
+
+  .topbar__user {
+    padding-left: 0;
+    border-left: none;
+  }
 }
