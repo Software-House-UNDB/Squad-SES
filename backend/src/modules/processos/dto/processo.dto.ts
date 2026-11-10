@@ -1,6 +1,15 @@
 import { PartialType } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 import { StatusProcesso, TipoEstagio } from '../../../generated/prisma/enums.js';
 
 export class CriarProcessoDto {
@@ -9,6 +18,15 @@ export class CriarProcessoDto {
 }
 
 export class AtualizarProcessoDto extends PartialType(CriarProcessoDto) {}
+
+// Texto vazio ou null limpa a observação.
+export class AnalisarProcessoDto {
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() || null : value))
+  @ValidateIf((dto: AnalisarProcessoDto) => dto.observacaoAnalise !== null)
+  @IsString({ message: 'observacaoAnalise inválida' })
+  @MaxLength(2000, { message: 'observacaoAnalise passa de 2000 caracteres' })
+  observacaoAnalise: string | null;
+}
 
 export class ListarProcessosDto {
   @IsOptional()
