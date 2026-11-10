@@ -20,7 +20,8 @@ export class AuditoriaService {
   // Recebe a transação de quem chama: a ação e o log são gravados juntos.
   async registrar(
     tx: Prisma.TransactionClient,
-    usuario: UsuarioAutenticado,
+    // Sem id quando a ação não tem usuário autenticado (usuarioId é opcional na tabela).
+    usuario: Pick<UsuarioAutenticado, 'ip'> & { id?: string },
     registro: RegistroAuditoria,
   ) {
     await tx.auditoria.create({
