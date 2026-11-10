@@ -9,10 +9,23 @@ import { Perfil, StatusProcesso } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import type { UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import { AuditoriaService } from '../auditoria/auditoria.service.js';
-import { AtualizarProcessoDto, CriarProcessoDto, ListarProcessosDto } from './dto/processo.dto.js';
+import {
+  AnalisarProcessoDto,
+  AtualizarProcessoDto,
+  CriarProcessoDto,
+  ListarProcessosDto,
+} from './dto/processo.dto.js';
 
 // pendencia: o ofício foi reprovado e volta para correção antes do reenvio.
 const STATUS_EDITAVEIS: StatusProcesso[] = [StatusProcesso.rascunho, StatusProcesso.pendencia];
+
+// A coordenação só comenta o que já foi enviado e ainda não foi aprovado.
+// A troca de status fica com a máquina de estados.
+const STATUS_ANALISAVEIS: StatusProcesso[] = [
+  StatusProcesso.enviado,
+  StatusProcesso.em_analise,
+  StatusProcesso.pendencia,
+];
 
 @Injectable()
 export class ProcessosService {
@@ -76,6 +89,32 @@ export class ProcessosService {
         entidadeId: id,
         dadosAntes: antes,
         dadosDepois: depois,
+      });
+      return depois;
+    });
+  }
+
+  async analisar(id: string, dto: AnalisarProcessoDto, usuario: UsuarioAutenticado) {
+    if (usuario.perfil !== Perfil.COORDENACAO_SES) {
+      throw new ForbiddenException('Apenas a coordenação SES analisa processos');
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const antes = await tx.processo.findUnique({ where: { id } });
+      if (!antes) throw new NotFoundException('Processo não encontrado');
+      if (!STATUS_ANALISAVEIS.includes(antes.status)) {
+        throw new ConflictException(`Processo em ${antes.status} não pode ser analisado`);
+      }
+
+      const depois = await tx.processo.update({
+        where: { id },
+        data: { observacaoAnalise: dto.observacaoAnalise },
+      });
+      await this.auditoria.registrar(tx, usuario, {
+        acao: 'UPDATE',
+        entidade: 'processo',
+        entidadeId: id,
+        dadosAntes: { observacaoAnalise: antes.observacaoAnalise },
+        dadosDepois: { observacaoAnalise: depois.observacaoAnalise },
       });
       return depois;
     });

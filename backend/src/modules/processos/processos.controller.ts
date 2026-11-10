@@ -14,7 +14,12 @@ import {
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import { AuthTemporarioGuard } from '../auth/auth-temporario.guard.js';
 import { UsuarioAtual, type UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
-import { AtualizarProcessoDto, CriarProcessoDto, ListarProcessosDto } from './dto/processo.dto.js';
+import {
+  AnalisarProcessoDto,
+  AtualizarProcessoDto,
+  CriarProcessoDto,
+  ListarProcessosDto,
+} from './dto/processo.dto.js';
 import { ProcessosService } from './processos.service.js';
 
 @ApiTags('processos')
@@ -46,6 +51,15 @@ export class ProcessosController {
     @UsuarioAtual() usuario: UsuarioAutenticado,
   ) {
     return this.processos.atualizar(id, dto, usuario);
+  }
+
+  @Patch(':id/analise')
+  analisar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AnalisarProcessoDto,
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+  ) {
+    return this.processos.analisar(id, dto, usuario);
   }
 
   @Delete(':id')
