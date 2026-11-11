@@ -103,7 +103,7 @@ Valida que documentos anexados a um processo vão para o B2 e voltam por URL ass
 - [ ] `GET /processos/:processoId/documentos/:id/url` → HTTP 200 + URL assinada válida por tempo limitado
 - [ ] Baixar pela URL assinada e comparar bytes — idênticos ao original
 - [ ] Upload maior que limite configurado → HTTP 413 (nunca 500)
-- [ ] Tentar baixar documento de outro processo (sem permissão) → HTTP 403
+- [ ] Tentar baixar documento de outro processo (sem permissão) → HTTP 404 (comportamento intencional: não vaza existência do processo)
 - [ ] Listar objetos no painel B2 (manual) — confirmar que o arquivo está lá, não ficou só no FS do Render
 
 ### Critério de PASS
