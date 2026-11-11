@@ -257,6 +257,23 @@ npm run format:check
 npm run format
 ```
 
+## Imagens Docker pinadas (10/11/2026)
+
+O `docker-compose.yml` passou a usar tags pinadas por causa de dois quebra-dev local em cadeia:
+
+- **Postgres** — era `postgres:latest`, virou `postgres:16-alpine`. Em set/2025 a tag `latest` passou a apontar pra Postgres 18, que mudou o default do `PGDATA` pra `/var/lib/postgresql/18/docker`. O volume do compose continua montado em `/var/lib/postgresql/data`, então subida limpa em Postgres 18 fica inconsistente e subida em cima de volume antigo v16/v17 é recusada por mismatch de `PG_VERSION`.
+- **MinIO + mc** — era `quay.io/minio/minio:latest` e `quay.io/minio/mc:latest`, virou `cgr.dev/chainguard/minio:latest` e `cgr.dev/chainguard/minio-client:latest`. O registry do Quay começou a responder 401 no manifest multi-arch em Docker Desktop (Windows).
+
+**Se você já rodou `npm run db:up` em alguma versão anterior**, o volume local está em Postgres 16/17/18 antigo e precisa ser recriado antes do próximo `up`:
+
+```bash
+npm run db:down
+docker volume rm squad-ses_postgres_data
+npm run db:up
+```
+
+Isso apaga qualquer dado de dev local (migrations e seeds voltam na subida). Não afeta Neon nem staging — é só dev.
+
 ## Divergências entre docx e repo (pra Rondineli confirmar)
 
 1. **Branch de integração**: docx não especifica, Rondineli respondeu `develop` na Q6, repo tem `dev`. Mantido `dev`.
