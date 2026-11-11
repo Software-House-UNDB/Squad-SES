@@ -84,6 +84,50 @@ describe('lerLote', () => {
     ]);
   });
 
+  it('aceita o lote sem endereço', async () => {
+    const { validos, invalidos } = await lerLote(
+      csv('nome,cpf,matricula,curso', 'Ana,52998224725,M1,Enfermagem'),
+    );
+
+    expect(invalidos).toEqual([]);
+    expect(validos[0].dto.cidade).toBeUndefined();
+  });
+
+  it('lê o menor de idade com o responsável', async () => {
+    const { validos, invalidos } = await lerLote(
+      csv(
+        'nome,cpf,matricula,curso,menor_idade,responsavel_nome',
+        'Ana,52998224725,M1,Enfermagem,Sim, Maria Souza ',
+        'Bia,11144477735,M2,Medicina,não,',
+        'Caio,39053344705,M3,Medicina,,',
+      ),
+    );
+
+    expect(invalidos).toEqual([]);
+    expect(validos[0].dto).toMatchObject({ menorIdade: true, responsavelNome: 'Maria Souza' });
+    expect(validos[1].dto.menorIdade).toBe(false);
+    expect(validos[2].dto.menorIdade).toBeUndefined();
+  });
+
+  it('exige o responsável do menor de idade', async () => {
+    const { invalidos } = await lerLote(
+      csv(
+        'nome,cpf,matricula,curso,menor_idade,responsavel_nome',
+        'Ana,52998224725,M1,Enfermagem,sim,',
+        'Bia,11144477735,M2,Medicina,talvez,',
+      ),
+    );
+
+    expect(invalidos).toEqual([
+      {
+        linha: 2,
+        campo: 'responsavel_nome',
+        motivo: 'nome do responsável é obrigatório para menor de idade',
+      },
+      { linha: 3, campo: 'menor_idade', motivo: 'menor de idade inválido' },
+    ]);
+  });
+
   it('aponta linha com número errado de colunas', async () => {
     const { invalidos } = await lerLote(csv(CABECALHO, 'Ana,52998224725'));
 
@@ -97,11 +141,7 @@ describe('lerLote', () => {
     ['sem dados', csv(CABECALHO), 'arquivo sem estagiários'],
     ['coluna a mais', csv('nome,idade'), 'coluna desconhecida: idade'],
     ['fora de UTF-8', Buffer.from([0x6e, 0xe3, 0x6f]), 'o arquivo precisa estar em UTF-8'],
-    [
-      'coluna faltando',
-      csv('nome,cpf'),
-      'colunas obrigatórias ausentes: matricula, curso, cidade, uf, cep',
-    ],
+    ['coluna faltando', csv('nome,cpf'), 'colunas obrigatórias ausentes: matricula, curso'],
   ])('rejeita arquivo %s', async (_caso, conteudo, motivo) => {
     expect(await erroDe(conteudo)).toEqual({ erro: 'csv_invalido', motivo });
   });

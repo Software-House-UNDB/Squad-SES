@@ -4,7 +4,7 @@ import { validate } from 'class-validator';
 import { Perfil, StatusProcesso } from '../../generated/prisma/enums.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import type { AuditoriaService } from '../auditoria/auditoria.service.js';
-import { AnalisarProcessoDto } from './dto/processo.dto.js';
+import { AnalisarProcessoDto, CriarProcessoDto } from './dto/processo.dto.js';
 import { ProcessosService } from './processos.service.js';
 
 const COORDENACAO = { id: 'coord', perfil: Perfil.COORDENACAO_SES };
@@ -109,4 +109,16 @@ describe('AnalisarProcessoDto', () => {
       expect(erros).toHaveLength(1);
     },
   );
+});
+
+describe('CriarProcessoDto', () => {
+  it.each([{}, { tipoEstagio: 'obrigatorio' }])('aceita %j', async (corpo) => {
+    expect(await validate(plainToInstance(CriarProcessoDto, corpo))).toEqual([]);
+  });
+
+  it('rejeita tipoEstagio desconhecido', async () => {
+    const erros = await validate(plainToInstance(CriarProcessoDto, { tipoEstagio: 'outro' }));
+
+    expect(erros).toHaveLength(1);
+  });
 });

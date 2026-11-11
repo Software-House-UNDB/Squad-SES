@@ -41,6 +41,11 @@ enum TipoDocumento {
   termo_compromisso
   kit_estagio
   anexo
+  plano_atividades
+  apolice
+  lista_indicados
+  documento_pessoal
+  declaracao
 
   @@map("tipo_documento")
 }
@@ -63,7 +68,7 @@ model Usuario {
 
 model Processo {
   id                String         @id @default(uuid()) @db.Uuid
-  tipoEstagio       TipoEstagio    @map("tipo_estagio")
+  tipoEstagio       TipoEstagio?   @map("tipo_estagio")
   status            StatusProcesso @default(rascunho)
   observacaoAnalise String?        @map("observacao_analise")
   criadoPorId       String         @map("criado_por_id") @db.Uuid
@@ -79,27 +84,29 @@ model Processo {
 }
 
 model Estagiario {
-  id            String      @id @default(uuid()) @db.Uuid
-  processoId    String      @map("processo_id") @db.Uuid
-  processo      Processo    @relation(fields: [processoId], references: [id], onDelete: Restrict)
-  nome          String
-  cpf           String      @db.Char(11)
-  matricula     String
-  curso         String
-  cidade        String
-  uf            String      @db.Char(2)
-  cep           String      @db.Char(8)
-  tipoLiberacao String?     @map("tipo_liberacao")
-  periodo       Int?
-  dataInicio    DateTime?   @map("data_inicio") @db.Date
-  dataTermino   DateTime?   @map("data_termino") @db.Date
-  horasPorDia   Int?        @map("horas_por_dia")
-  diasSemana    String[]    @map("dias_semana")
-  horarioInicio String?     @map("horario_inicio") @db.Char(5)
-  horarioFim    String?     @map("horario_fim") @db.Char(5)
-  criadoEm      DateTime    @default(now()) @map("criado_em")
-  atualizadoEm  DateTime    @updatedAt @map("atualizado_em")
-  documentos    Documento[]
+  id              String      @id @default(uuid()) @db.Uuid
+  processoId      String      @map("processo_id") @db.Uuid
+  processo        Processo    @relation(fields: [processoId], references: [id], onDelete: Restrict)
+  nome            String
+  cpf             String      @db.Char(11)
+  matricula       String
+  curso           String
+  menorIdade      Boolean     @default(false) @map("menor_idade")
+  responsavelNome String?     @map("responsavel_nome")
+  cidade          String?
+  uf              String?     @db.Char(2)
+  cep             String?     @db.Char(8)
+  tipoLiberacao   String?     @map("tipo_liberacao")
+  periodo         Int?
+  dataInicio      DateTime?   @map("data_inicio") @db.Date
+  dataTermino     DateTime?   @map("data_termino") @db.Date
+  horasPorDia     Int?        @map("horas_por_dia")
+  diasSemana      String[]    @map("dias_semana")
+  horarioInicio   String?     @map("horario_inicio") @db.Char(5)
+  horarioFim      String?     @map("horario_fim") @db.Char(5)
+  criadoEm        DateTime    @default(now()) @map("criado_em")
+  atualizadoEm    DateTime    @updatedAt @map("atualizado_em")
+  documentos      Documento[]
 
   @@unique([processoId, cpf])
   @@unique([processoId, matricula])
