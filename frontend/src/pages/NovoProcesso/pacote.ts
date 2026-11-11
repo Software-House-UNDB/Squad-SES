@@ -82,7 +82,7 @@ export async function hashDoArquivo(arquivo: Blob): Promise<string | null> {
       leitor.onerror = () => reject(leitor.error);
       leitor.readAsArrayBuffer(arquivo);
     });
-    const digest = await subtle.digest('SHA-256', bytes);
+    const digest = await subtle.digest('SHA-256', new Uint8Array(bytes));
     return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
   } catch {
     return null;
