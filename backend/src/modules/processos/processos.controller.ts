@@ -11,8 +11,8 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiHeader, ApiTags } from '@nestjs/swagger';
-import { AuthTemporarioGuard } from '../auth/auth-temporario.guard.js';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { UsuarioAtual, type UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import {
   AnalisarProcessoDto,
@@ -23,8 +23,8 @@ import {
 import { ProcessosService } from './processos.service.js';
 
 @ApiTags('processos')
-@ApiHeader({ name: 'x-usuario-id', description: 'Temporário, até o JWT' })
-@UseGuards(AuthTemporarioGuard)
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('processos')
 export class ProcessosController {
   constructor(private readonly processos: ProcessosService) {}
