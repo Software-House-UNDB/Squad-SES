@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearSession, getAccessToken, getRefreshToken } from '../auth/session.ts';
-import { DEMO_USER } from '../services/authService.ts';
+import { DEMO_USER, DEMO_USER_IES } from '../services/authService.ts';
 import { fakeServer, renderApp, usuarioDe } from '../test-utils.tsx';
 import type { Perfil } from '../types/auth.ts';
 
@@ -126,6 +126,26 @@ describe('fluxo de login (demonstração, VITE_AUTH_MOCK=true)', () => {
     await preencherEEnviar(DEMO_USER.email, DEMO_USER.senha);
 
     expect(await screen.findByRole('heading', { name: 'Análise de Ofícios' })).toBeInTheDocument();
+    expect(servidor).not.toHaveBeenCalled();
+  });
+
+  it('mostra também a credencial do representante da IES', () => {
+    renderApp('/login');
+    expect(screen.getByText(DEMO_USER_IES.email)).toBeInTheDocument();
+    expect(screen.getByText(DEMO_USER_IES.senha)).toBeInTheDocument();
+  });
+
+  it('entra como representante da IES e cai no início, sem acesso à análise de ofícios', async () => {
+    const servidor = vi.fn(() => ({ status: 500 }));
+    fakeServer(servidor);
+    renderApp('/login');
+
+    await preencherEEnviar(DEMO_USER_IES.email, DEMO_USER_IES.senha);
+
+    // o login de demonstração demora ~500ms; o início também lista "Novo processo" num atalho
+    const atalhos = await screen.findAllByRole('link', { name: 'Novo processo' }, { timeout: 4000 });
+    expect(atalhos.length).toBeGreaterThan(0);
+    expect(screen.queryByRole('link', { name: 'Análise de Ofícios' })).not.toBeInTheDocument();
     expect(servidor).not.toHaveBeenCalled();
   });
 

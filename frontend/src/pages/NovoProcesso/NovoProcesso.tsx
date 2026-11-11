@@ -14,6 +14,7 @@ import PageHeader from '../../components/layout/PageHeader.tsx';
 import Badge from '../../components/ui/Badge.tsx';
 import IconButton from '../../components/ui/IconButton.tsx';
 import Toast from '../../components/ui/Toast.tsx';
+import { enviarProcesso } from '../../services/processoService.ts';
 import ArquivoSlot, { type Arquivo } from './ArquivoSlot.tsx';
 import { DOCS_DO_PROCESSO, docsDoEstagiario, exigidos, pendenciasDoPacote, validarArquivo } from './pacote.ts';
 import {
@@ -35,12 +36,6 @@ interface ToastState {
 }
 
 const PENDENCIAS_VISIVEIS = 4;
-
-// Troque pela chamada à API (POST /processos + envio) quando o recurso estiver pronto.
-// Quem chama já trata falha: a tela mostra o erro e mantém tudo o que foi preenchido.
-async function enviarProcesso(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 1200));
-}
 
 /** Tela "Novo processo de documentação" do representante da IES (RF-06, RF-08, RF-09, RF-10, RF-13). */
 export default function NovoProcesso() {
