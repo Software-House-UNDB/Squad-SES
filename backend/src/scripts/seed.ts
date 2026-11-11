@@ -2,7 +2,7 @@
 // Uso, na raiz do projeto:
 //   npm run build --workspace=backend
 //   npm run seed --workspace=backend
-// Lê DATABASE_URL e SEED_SENHA do backend/.env. Rodar de novo só atualiza a senha.
+// Lê DATABASE_URL e SEED_SENHA do backend/.env. Rodar de novo atualiza os usuários (inclusive a senha).
 import { hash } from '@node-rs/argon2';
 import { Perfil } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -36,7 +36,8 @@ try {
     await prisma.usuario.upsert({
       where: { email: usuario.email },
       create: { ...usuario, senhaHash },
-      update: { senhaHash },
+      // Atualiza tudo: o que está neste arquivo é o que fica no banco.
+      update: { ...usuario, senhaHash },
     });
     console.log(`ok: ${usuario.email} (${usuario.perfil})`);
   }
