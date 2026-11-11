@@ -1,30 +1,30 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
-import {
-  CircleAlert,
-  CircleCheck,
-  FileCheck2,
-  FilePlus2,
-  FolderOpen,
-  Loader2,
-  Trash2,
-  UserPlus,
-  Users,
-} from 'lucide-react';
+import { CircleCheck, FilePlus2 } from 'lucide-react';
 import PageHeader from '../../components/layout/PageHeader.tsx';
 import Badge from '../../components/ui/Badge.tsx';
-import IconButton from '../../components/ui/IconButton.tsx';
 import Toast from '../../components/ui/Toast.tsx';
-import { enviarProcesso } from '../../services/processoService.ts';
-import ArquivoSlot, { type Arquivo } from './ArquivoSlot.tsx';
-import { DOCS_DO_PROCESSO, docsDoEstagiario, exigidos, pendenciasDoPacote, validarArquivo } from './pacote.ts';
+import { ArquivoRepetidoError, enviarProcesso } from '../../services/processoService.ts';
+import type { Arquivo } from './ArquivoSlot.tsx';
+import LoteEstagiarios from './LoteEstagiarios.tsx';
+import {
+  exigidos,
+  hashDoArquivo,
+  MSG_ARQUIVO_REPETIDO,
+  pendenciasDoPacote,
+  validarArquivo,
+} from './pacote.ts';
+import PacoteDocumentos from './PacoteDocumentos.tsx';
+import ResumoProcesso from './ResumoProcesso.tsx';
 import {
   ESTAGIARIO_VAZIO,
-  formatarCpf,
   validarEstagiario,
   type ErrosEstagiario,
   type EstagiarioForm,
 } from './validacao.ts';
 import './novoProcesso.css';
+
+const MSG_ERRO_ENVIO =
+  'Não foi possível enviar o processo. Nada foi perdido: confira a conexão e tente de novo.';
 
 type Envio = 'editando' | 'enviando' | 'enviado';
 
@@ -35,8 +35,6 @@ interface ToastState {
   undo?: () => void;
 }
 
-const PENDENCIAS_VISIVEIS = 4;
-
 /** Tela "Novo processo de documentação" do representante da IES (RF-06, RF-08, RF-09, RF-10, RF-13). */
 export default function NovoProcesso() {
   const [estagiarios, setEstagiarios] = useState<EstagiarioForm[]>([]);
@@ -45,7 +43,7 @@ export default function NovoProcesso() {
   const [anexos, setAnexos] = useState<Record<string, Arquivo>>({});
   const [errosArquivo, setErrosArquivo] = useState<Record<string, string>>({});
   const [envio, setEnvio] = useState<Envio>('editando');
-  const [erroEnvio, setErroEnvio] = useState(false);
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const uid = useId();
@@ -109,13 +107,21 @@ export default function NovoProcesso() {
     });
   }
 
-  function anexar(chave: string, arquivo: File) {
-    const problema = validarArquivo(arquivo);
+  async function anexar(chave: string, arquivo: File) {
+    let problema = validarArquivo(arquivo);
+    const hash = problema ? null : await hashDoArquivo(arquivo);
+    // O backend recusa (409) o mesmo arquivo duas vezes no processo; avisamos antes de enviar.
+    if (hash && Object.entries(anexos).some(([k, a]) => k !== chave && a.hash === hash)) {
+      problema = MSG_ARQUIVO_REPETIDO;
+    }
+    if (!montado.current) return;
     setErrosArquivo((atual) => {
       const { [chave]: _antigo, ...resto } = atual;
       return problema ? { ...resto, [chave]: problema } : resto;
     });
-    if (!problema) setAnexos((atual) => ({ ...atual, [chave]: { nome: arquivo.name, tamanho: arquivo.size } }));
+    if (!problema) {
+      setAnexos((atual) => ({ ...atual, [chave]: { nome: arquivo.name, tamanho: arquivo.size, hash: hash ?? undefined } }));
+    }
   }
 
   function remover(chave: string) {
@@ -127,18 +133,20 @@ export default function NovoProcesso() {
 
   async function enviar() {
     if (!podeEnviar) return;
-    setErroEnvio(false);
+    setErroEnvio(null);
     setEnvio('enviando');
     try {
       await enviarProcesso();
       if (montado.current) setEnvio('enviado');
-    } catch {
+    } catch (e) {
       if (!montado.current) return;
       setEnvio('editando');
-      setErroEnvio(true);
+      setErroEnvio(e instanceof ArquivoRepetidoError ? MSG_ARQUIVO_REPETIDO : MSG_ERRO_ENVIO);
     }
   }
 
+  // TODO: persistir o rascunho quando existir o endpoint de rascunho na API.
+  // Hoje só avisa o usuário; nada é salvo.
   function salvarRascunho() {
     setToast({
       variant: 'approved',
@@ -153,21 +161,9 @@ export default function NovoProcesso() {
     setErros({});
     setAnexos({});
     setErrosArquivo({});
-    setErroEnvio(false);
+    setErroEnvio(null);
     setEnvio('editando');
   }
-
-  const erro = (chave: keyof EstagiarioForm) =>
-    erros[chave] ? (
-      <span className="np-error" id={id(`${chave}-erro`)} role="alert">
-        {erros[chave]}
-      </span>
-    ) : null;
-  const aria = (chave: keyof EstagiarioForm) => ({
-    id: id(chave),
-    'aria-invalid': erros[chave] ? true : undefined,
-    'aria-describedby': erros[chave] ? id(`${chave}-erro`) : undefined,
-  });
 
   if (envio === 'enviado') {
     return (
@@ -208,279 +204,40 @@ export default function NovoProcesso() {
 
       <div className="np-layout">
         <div className="np-main">
-          <section className="np-card" aria-labelledby={id('est-titulo')}>
-            <header className="np-card__head">
-              <span className="np-card__icon">
-                <Users size={18} />
-              </span>
-              <div>
-                <h2 className="np-card__title" id={id('est-titulo')}>
-                  Estagiários do lote
-                </h2>
-                <p className="np-card__hint">
-                  Adicione um por vez. Todos os campos são obrigatórios.
-                </p>
-              </div>
-              <Badge variant={estagiarios.length ? 'approved' : 'neutral'}>
-                {estagiarios.length} no lote
-              </Badge>
-            </header>
-
-            <form className="np-form" onSubmit={adicionarEstagiario} noValidate>
-              <div className="np-grid">
-                <div className="np-field np-span-2">
-                  <label htmlFor={id('nome')}>Nome completo</label>
-                  <input
-                    {...aria('nome')}
-                    ref={nomeRef}
-                    value={rascunho.nome}
-                    onChange={(e) => campo('nome', e.target.value)}
-                    autoComplete="off"
-                  />
-                  {erro('nome')}
-                </div>
-                <div className="np-field">
-                  <label htmlFor={id('cpf')}>CPF</label>
-                  <input
-                    {...aria('cpf')}
-                    inputMode="numeric"
-                    placeholder="000.000.000-00"
-                    value={rascunho.cpf}
-                    onChange={(e) => campo('cpf', formatarCpf(e.target.value))}
-                  />
-                  {erro('cpf')}
-                </div>
-                <div className="np-field">
-                  <label htmlFor={id('matricula')}>Matrícula</label>
-                  <input
-                    {...aria('matricula')}
-                    value={rascunho.matricula}
-                    onChange={(e) => campo('matricula', e.target.value)}
-                  />
-                  {erro('matricula')}
-                </div>
-                <div className="np-field np-span-2">
-                  <label htmlFor={id('curso')}>Curso</label>
-                  <input
-                    {...aria('curso')}
-                    value={rascunho.curso}
-                    onChange={(e) => campo('curso', e.target.value)}
-                  />
-                  {erro('curso')}
-                </div>
-                <label className="np-check-menor np-span-2">
-                  <input
-                    type="checkbox"
-                    checked={rascunho.menor}
-                    onChange={(e) => {
-                      campo('menor', e.target.checked);
-                      if (!e.target.checked) campo('responsavel', '');
-                    }}
-                  />
-                  <span>
-                    <strong>Estagiário menor de idade</strong>
-                    <small>Exige identidade e declaração do responsável no pacote.</small>
-                  </span>
-                </label>
-                {rascunho.menor && (
-                  <div className="np-field np-span-2">
-                    <label htmlFor={id('responsavel')}>Nome do responsável</label>
-                    <input
-                      {...aria('responsavel')}
-                      value={rascunho.responsavel}
-                      onChange={(e) => campo('responsavel', e.target.value)}
-                      autoComplete="off"
-                    />
-                    {erro('responsavel')}
-                  </div>
-                )}
-              </div>
-
-              <div className="np-form__actions">
-                <button type="submit" className="np-btn np-btn--secondary">
-                  <UserPlus size={16} />
-                  Adicionar ao lote
-                </button>
-              </div>
-            </form>
-
-            {estagiarios.length > 0 && (
-              <ul className="np-lista" aria-label="Estagiários do lote">
-                {estagiarios.map((e, i) => (
-                  <li key={e.cpf} className="np-aluno">
-                    <span className="np-aluno__avatar" aria-hidden="true">
-                      {e.nome.trim()[0]?.toUpperCase()}
-                    </span>
-                    <div className="np-aluno__info">
-                      <p className="np-aluno__nome">
-                        {e.nome}
-                        {e.menor && <Badge variant="pending">Menor de idade</Badge>}
-                      </p>
-                      <p className="np-aluno__detalhe">
-                        {e.curso} · Mat. {e.matricula} · CPF {e.cpf}
-                        {e.menor ? ` · Responsável: ${e.responsavel}` : ''}
-                      </p>
-                    </div>
-                    <IconButton
-                      icon={Trash2}
-                      variant="danger"
-                      label={`Remover ${e.nome}`}
-                      onClick={() => removerEstagiario(i)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="np-card" aria-labelledby={id('doc-titulo')}>
-            <header className="np-card__head">
-              <span className="np-card__icon">
-                <FolderOpen size={18} />
-              </span>
-              <div>
-                <h2 className="np-card__title" id={id('doc-titulo')}>
-                  Pacote de documentos
-                </h2>
-                <p className="np-card__hint">PDF, JPG ou PNG, até 20 MB por arquivo.</p>
-              </div>
-              <Badge variant={todos.length > 0 && completos === todos.length ? 'approved' : 'neutral'}>
-                {completos} de {todos.length}
-              </Badge>
-            </header>
-
-            <h3 className="np-subtitulo">Do processo</h3>
-            <ul className="np-slots">
-              <li className="np-slot np-slot--gerado">
-                <div className="np-slot__linha">
-                  <span className="np-slot__estado" aria-hidden="true">
-                    <FileCheck2 size={18} />
-                  </span>
-                  <span className="np-slot__rotulo">
-                    Termo de compromisso de estágio (TCE)
-                    <span className="np-slot__nota">
-                      Criado pelo sistema com o modelo da SES (Portaria 1327). Você não precisa
-                      anexar.
-                    </span>
-                  </span>
-                  <Badge variant="neutral">Gerado pelo sistema</Badge>
-                </div>
-              </li>
-              {DOCS_DO_PROCESSO.map((d) => (
-                <ArquivoSlot
-                  key={d.chave}
-                  rotulo={d.rotulo}
-                  arquivo={anexos[d.chave]}
-                  erro={errosArquivo[d.chave]}
-                  onEscolher={(f) => anexar(d.chave, f)}
-                  onRemover={() => remover(d.chave)}
-                />
-              ))}
-            </ul>
-
-            <h3 className="np-subtitulo">De cada estagiário</h3>
-            {estagiarios.length === 0 ? (
-              <p className="np-vazio">
-                Adicione estagiários ao lote para anexar os documentos de cada um.
-              </p>
-            ) : (
-              estagiarios.map((e) => (
-                <div key={e.cpf} className="np-grupo">
-                  <p className="np-grupo__nome">{e.nome}</p>
-                  <ul className="np-slots">
-                    {docsDoEstagiario(e.cpf, e.menor).map((d) => (
-                      <ArquivoSlot
-                        key={d.chave}
-                        rotulo={d.rotulo}
-                        arquivo={anexos[d.chave]}
-                        erro={errosArquivo[d.chave]}
-                        onEscolher={(f) => anexar(d.chave, f)}
-                        onRemover={() => remover(d.chave)}
-                      />
-                    ))}
-                  </ul>
-                </div>
-              ))
-            )}
-          </section>
+          <LoteEstagiarios
+            estagiarios={estagiarios}
+            rascunho={rascunho}
+            erros={erros}
+            id={id}
+            nomeRef={nomeRef}
+            onCampo={campo}
+            onAdicionar={adicionarEstagiario}
+            onRemover={removerEstagiario}
+          />
+          <PacoteDocumentos
+            estagiarios={estagiarios}
+            anexos={anexos}
+            errosArquivo={errosArquivo}
+            total={todos.length}
+            completos={completos}
+            id={id}
+            onAnexar={anexar}
+            onRemover={remover}
+          />
         </div>
 
-        <aside className="np-resumo" aria-label="Resumo do processo">
-          <div className="np-resumo__topo">
-            <h2 className="np-resumo__title">Resumo</h2>
-            <Badge variant="neutral">Rascunho</Badge>
-          </div>
-          <dl className="np-resumo__lista">
-            <div>
-              <dt>Estagiários</dt>
-              <dd>{estagiarios.length}</dd>
-            </div>
-            <div>
-              <dt>Documentos anexados</dt>
-              <dd>
-                {completos} de {todos.length}
-              </dd>
-            </div>
-          </dl>
-
-          <div className="np-barra" aria-hidden="true">
-            <span style={{ width: `${todos.length ? (completos / todos.length) * 100 : 0}%` }} />
-          </div>
-
-          <div className="np-pendencias" id={id('pendencias')} aria-live="polite">
-            {pendencias.length === 0 ? (
-              <p className="np-pendencias__ok">
-                <CircleCheck size={16} /> Pacote completo. Pode enviar.
-              </p>
-            ) : (
-              <>
-                <p className="np-pendencias__titulo">Para enviar, falta:</p>
-                <ul>
-                  {pendencias.slice(0, PENDENCIAS_VISIVEIS).map((p) => (
-                    <li key={p}>{p}</li>
-                  ))}
-                  {pendencias.length > PENDENCIAS_VISIVEIS && (
-                    <li>e mais {pendencias.length - PENDENCIAS_VISIVEIS} item(ns)</li>
-                  )}
-                </ul>
-              </>
-            )}
-          </div>
-
-          {erroEnvio && (
-            <div className="np-erro-envio" role="alert">
-              <CircleAlert size={16} />
-              <p>
-                Não foi possível enviar o processo. Nada foi perdido: confira a conexão e tente de
-                novo.
-              </p>
-            </div>
-          )}
-
-          <button
-            type="button"
-            className="np-btn np-btn--primary"
-            onClick={enviar}
-            disabled={!podeEnviar}
-            aria-describedby={id('pendencias')}
-          >
-            {envio === 'enviando' ? (
-              <>
-                <Loader2 size={16} className="np-spin" /> Enviando…
-              </>
-            ) : (
-              'Enviar processo'
-            )}
-          </button>
-          <button
-            type="button"
-            className="np-btn np-btn--ghost"
-            onClick={salvarRascunho}
-            disabled={envio === 'enviando'}
-          >
-            Salvar rascunho
-          </button>
-        </aside>
+        <ResumoProcesso
+          estagiarios={estagiarios.length}
+          total={todos.length}
+          completos={completos}
+          pendencias={pendencias}
+          enviando={envio === 'enviando'}
+          erroEnvio={erroEnvio}
+          podeEnviar={podeEnviar}
+          id={id}
+          onEnviar={enviar}
+          onSalvarRascunho={salvarRascunho}
+        />
       </div>
 
       {toast && (

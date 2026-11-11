@@ -2,14 +2,20 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearSession } from '../../auth/session.ts';
-import { enviarProcesso } from '../../services/processoService.ts';
+import { ArquivoRepetidoError, enviarProcesso } from '../../services/processoService.ts';
 import { loginAs, renderApp } from '../../test-utils.tsx';
 
 // O envio real (API) ainda não existe; aqui ele é controlado pelo teste.
-vi.mock('../../services/processoService.ts', () => ({ enviarProcesso: vi.fn() }));
+vi.mock('../../services/processoService.ts', async (original) => ({
+  ...(await original<typeof import('../../services/processoService.ts')>()),
+  enviarProcesso: vi.fn(),
+}));
 const enviarMock = vi.mocked(enviarProcesso);
 
-const pdf = (nome = 'doc.pdf') => new File(['x'], nome, { type: 'application/pdf' });
+// Conteúdo único por arquivo: o mesmo conteúdo em dois slots é tratado como arquivo repetido.
+let sequencia = 0;
+const pdf = (nome = 'doc.pdf') =>
+  new File([`conteudo-${sequencia++}`], nome, { type: 'application/pdf' });
 
 // Cola o texto de uma vez: digitar tecla por tecla estoura o tempo quando a suíte roda inteira.
 async function colar(campo: HTMLElement, texto: string) {
@@ -48,8 +54,11 @@ async function adicionar([nome, cpf, matricula]: readonly [string, string, strin
   await adicionarAoLote();
 }
 
+// Anexar calcula o hash do arquivo (assíncrono): espera o nome aparecer na tela.
 async function anexar(rotulo: string, arquivo: File = pdf()) {
+  const antes = screen.queryAllByText(arquivo.name).length;
   await userEvent.upload(screen.getByLabelText(`Anexar ${rotulo}`), arquivo);
+  await waitFor(() => expect(screen.queryAllByText(arquivo.name).length).toBeGreaterThan(antes));
 }
 
 /** Anexa todo o pacote de um lote com um estagiário maior de idade (Ana). */
@@ -219,11 +228,28 @@ describe('Novo processo de documentação', () => {
       expect(screen.getByLabelText('Anexar Plano de atividades')).toBeInTheDocument();
     });
 
-    it('aceita JPG e PNG nos documentos pessoais', async () => {
+    it('recusa imagem (JPG/PNG): o backend aceita só PDF', async () => {
       abrir();
       await adicionar(ANA);
-      await anexar('Documentos pessoais', new File(['x'], 'rg.png', { type: 'image/png' }));
-      expect(screen.getByText('rg.png')).toBeInTheDocument();
+      await userEvent.upload(
+        screen.getByLabelText('Anexar Documentos pessoais'),
+        new File(['x'], 'rg.png', { type: 'image/png' }),
+        { applyAccept: false },
+      );
+      expect(screen.getByText('Formato não aceito. Envie o arquivo em PDF.')).toBeInTheDocument();
+      expect(screen.queryByText('rg.png')).not.toBeInTheDocument();
+    });
+
+    it('recusa o mesmo arquivo em dois documentos e libera ao anexar outro', async () => {
+      abrir();
+      const igual = () => new File(['mesmo-conteudo'], 'unico.pdf', { type: 'application/pdf' });
+      await anexar('Plano de atividades', igual());
+      await userEvent.upload(screen.getByLabelText('Anexar Apólice de seguro'), igual());
+      expect(await screen.findByText(/já foi anexado em outro documento/)).toBeInTheDocument();
+      expect(screen.getAllByText('unico.pdf')).toHaveLength(1);
+
+      await anexar('Apólice de seguro', pdf('apolice.pdf'));
+      expect(screen.queryByText(/já foi anexado em outro documento/)).not.toBeInTheDocument();
     });
 
     it('recusa formato não aceito e diz qual usar', async () => {
@@ -233,7 +259,7 @@ describe('Novo processo de documentação', () => {
         new File(['x'], 'a.txt', { type: 'text/plain' }),
         { applyAccept: false },
       );
-      expect(screen.getByText('Formato não aceito. Use PDF, JPG ou PNG.')).toBeInTheDocument();
+      expect(screen.getByText('Formato não aceito. Envie o arquivo em PDF.')).toBeInTheDocument();
       expect(screen.queryByText('a.txt')).not.toBeInTheDocument();
     });
 
@@ -241,7 +267,7 @@ describe('Novo processo de documentação', () => {
       abrir();
       const grande = pdf('grande.pdf');
       Object.defineProperty(grande, 'size', { value: 21 * 1024 * 1024 });
-      await anexar('Apólice de seguro', grande);
+      await userEvent.upload(screen.getByLabelText('Anexar Apólice de seguro'), grande);
       expect(screen.getByText('O arquivo tem 21,0 MB. O limite é 20 MB.')).toBeInTheDocument();
       expect(screen.queryByText('grande.pdf')).not.toBeInTheDocument();
 
@@ -351,6 +377,16 @@ describe('Novo processo de documentação', () => {
       await userEvent.click(botaoEnviar());
       expect(await screen.findByRole('heading', { name: 'Processo enviado' })).toBeInTheDocument();
       expect(enviarMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('se a API recusar arquivo repetido (409), explica o motivo e permite corrigir', async () => {
+      enviarMock.mockRejectedValueOnce(new ArquivoRepetidoError());
+      abrir();
+      await adicionar(ANA);
+      await completarPacoteDeUmEstagiario();
+      await userEvent.click(botaoEnviar());
+      expect(await screen.findByRole('alert')).toHaveTextContent(/já foi anexado em outro documento/);
+      expect(botaoEnviar()).toBeEnabled();
     });
 
     it('"Criar outro processo" volta para um formulário vazio', async () => {

@@ -6,6 +6,8 @@ import { ACCEPT, formatarTamanho } from './pacote.ts';
 export interface Arquivo {
   nome: string;
   tamanho: number;
+  /** SHA-256 do conteúdo; o backend recusa o mesmo arquivo duas vezes no processo (409). */
+  hash?: string;
 }
 
 interface ArquivoSlotProps {

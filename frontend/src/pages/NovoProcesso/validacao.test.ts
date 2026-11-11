@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ESTAGIARIO_VAZIO, cpfValido, formatarCpf, validarEstagiario } from './validacao.ts';
-import { docsDoEstagiario, exigidos, pendenciasDoPacote, validarArquivo } from './pacote.ts';
+import { DOCS_DO_PROCESSO, docsDoEstagiario, exigidos, pendenciasDoPacote, validarArquivo } from './pacote.ts';
 
 const valido = {
   ...ESTAGIARIO_VAZIO,
@@ -60,11 +60,11 @@ describe('pacote de documentos (RF-08, RF-09, RF-10, RF-13)', () => {
 
   it('pede plano, apólice, lista e os documentos pessoais de cada estagiário', () => {
     expect(exigidos([maior, menor]).map((d) => d.chave)).toEqual([
-      'plano',
+      'plano_atividades',
       'apolice',
-      'lista',
-      '1|pessoais',
-      '2|pessoais',
+      'lista_indicados',
+      '1|documento_pessoal',
+      '2|documento_pessoal',
       '2|identidade_responsavel',
       '2|declaracao_responsavel',
     ]);
@@ -77,7 +77,7 @@ describe('pacote de documentos (RF-08, RF-09, RF-10, RF-13)', () => {
 
   it('pacote incompleto não avança e diz o que falta', () => {
     expect(pendenciasDoPacote([], new Set())[0]).toMatch(/ao menos um estagiário/);
-    const faltando = pendenciasDoPacote([maior], new Set(['plano', 'apolice', 'lista']));
+    const faltando = pendenciasDoPacote([maior], new Set(['plano_atividades', 'apolice', 'lista_indicados']));
     expect(faltando).toEqual(['Ana: documentos pessoais']);
   });
 
@@ -86,10 +86,24 @@ describe('pacote de documentos (RF-08, RF-09, RF-10, RF-13)', () => {
     expect(pendenciasDoPacote([maior], tudo)).toEqual([]);
   });
 
-  it('aceita PDF, JPG e PNG até 20 MB', () => {
+  it('aceita só PDF, até 20 MB', () => {
     expect(validarArquivo({ type: 'application/pdf', size: 1024 })).toBeNull();
-    expect(validarArquivo({ type: 'image/png', size: 1024 })).toBeNull();
+    expect(validarArquivo({ type: 'image/png', size: 1024 })).toMatch(/Formato/);
+    expect(validarArquivo({ type: 'image/jpeg', size: 1024 })).toMatch(/Formato/);
     expect(validarArquivo({ type: 'text/plain', size: 10 })).toMatch(/Formato/);
     expect(validarArquivo({ type: 'application/pdf', size: 21 * 1024 * 1024 })).toMatch(/20 MB/);
+  });
+});
+
+describe('tipos enviados à API (RF-09)', () => {
+  it('traduz os slots para os tipos do backend', () => {
+    expect(DOCS_DO_PROCESSO.map((d) => d.tipo)).toEqual(['plano_atividades', 'apolice', 'lista_indicados']);
+    expect(docsDoEstagiario('1', false).map((d) => d.tipo)).toEqual(['documento_pessoal']);
+    // identidade do responsável entra como documento pessoal; a declaração tem tipo próprio
+    expect(docsDoEstagiario('1', true).map((d) => d.tipo)).toEqual([
+      'documento_pessoal',
+      'documento_pessoal',
+      'declaracao',
+    ]);
   });
 });
