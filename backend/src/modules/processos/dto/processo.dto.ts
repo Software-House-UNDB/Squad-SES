@@ -13,8 +13,9 @@ import {
 import { StatusProcesso, TipoEstagio } from '../../../generated/prisma/enums.js';
 
 export class CriarProcessoDto {
+  @IsOptional()
   @IsEnum(TipoEstagio, { message: 'tipoEstagio inválido' })
-  tipoEstagio: TipoEstagio;
+  tipoEstagio?: TipoEstagio;
 }
 
 export class AtualizarProcessoDto extends PartialType(CriarProcessoDto) {}
