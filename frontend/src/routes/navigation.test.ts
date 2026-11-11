@@ -15,9 +15,9 @@ describe('menu por perfil', () => {
     ]);
   });
 
-  it('representante da IES vê só o início, sem seções vazias', () => {
-    expect(links('representante_ies')).toEqual(['/dashboard']);
-    expect(navFor('representante_ies')).toHaveLength(1);
+  it('representante da IES vê início e novo processo, sem seções vazias', () => {
+    expect(links('representante_ies')).toEqual(['/dashboard', '/gerenciamento/novo-processo']);
+    expect(navFor('representante_ies')).toHaveLength(2);
   });
 });
 

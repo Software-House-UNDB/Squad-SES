@@ -7,9 +7,11 @@ describe('permissions', () => {
     expect(homeFor('representante_ies')).toBe('/dashboard');
   });
 
-  it('só a coordenação acessa as áreas de gerenciamento e administração', () => {
-    for (const perfis of Object.values(ACCESS)) {
+  it('só a coordenação acessa análise, assinatura e administração', () => {
+    const { novoProcesso, ...restritas } = ACCESS;
+    for (const perfis of Object.values(restritas)) {
       expect(perfis).toEqual(['coordenacao_ses']);
     }
+    expect(novoProcesso).toEqual(['representante_ies']);
   });
 });

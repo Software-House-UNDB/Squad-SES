@@ -73,3 +73,19 @@ describe('rotas protegidas por perfil', () => {
     expect(heading('Entrar')).toBeInTheDocument();
   });
 });
+
+describe('novo processo', () => {
+  beforeEach(() => clearSession());
+
+  it('representante da IES abre a tela', () => {
+    loginAs('representante_ies');
+    renderApp('/gerenciamento/novo-processo');
+    expect(heading('Novo processo de documentação')).toBeInTheDocument();
+  });
+
+  it('coordenação não cria processo (RF-06)', () => {
+    loginAs('coordenacao_ses');
+    renderApp('/gerenciamento/novo-processo');
+    expect(heading('Acesso negado')).toBeInTheDocument();
+  });
+});
