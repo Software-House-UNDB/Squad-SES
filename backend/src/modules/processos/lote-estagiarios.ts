@@ -8,6 +8,8 @@ const COLUNAS = {
   cpf: 'cpf',
   matricula: 'matricula',
   curso: 'curso',
+  menor_idade: 'menorIdade',
+  responsavel_nome: 'responsavelNome',
   cidade: 'cidade',
   uf: 'uf',
   cep: 'cep',
@@ -23,7 +25,7 @@ const COLUNAS = {
 
 type Coluna = keyof typeof COLUNAS;
 
-const COLUNAS_OBRIGATORIAS: Coluna[] = ['nome', 'cpf', 'matricula', 'curso', 'cidade', 'uf', 'cep'];
+const COLUNAS_OBRIGATORIAS: Coluna[] = ['nome', 'cpf', 'matricula', 'curso'];
 
 const NOME_DA_COLUNA = Object.fromEntries(
   Object.entries(COLUNAS).map(([coluna, campo]) => [campo, coluna]),
