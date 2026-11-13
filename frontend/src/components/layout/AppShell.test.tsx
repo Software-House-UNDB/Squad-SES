@@ -27,11 +27,11 @@ describe('shell da área autenticada', () => {
     expect(screen.getByText(/Coordenação SES/, { selector: '.topbar__role' })).toBeInTheDocument();
   });
 
-  it('representante da IES vê só o início', () => {
+  it('representante da IES vê só início e novo processo', () => {
     loginAs('representante_ies');
     renderApp('/dashboard');
 
-    expect(within(menu()).getAllByRole('link')).toHaveLength(1);
+    expect(within(menu()).getAllByRole('link')).toHaveLength(2);
     expect(screen.queryByText('Administração')).not.toBeInTheDocument();
   });
 
@@ -75,13 +75,15 @@ describe('shell da área autenticada', () => {
       renderApp('/dashboard');
       await userEvent.click(screen.getByRole('button', { name: 'Abrir menu' }));
 
-      // Elementos do menu: Fechar menu e Início. O Tab seguinte volta ao primeiro, sem sair do menu.
+      // Elementos do menu: Fechar menu, Início e Novo processo. O Tab seguinte volta ao primeiro.
       await userEvent.tab();
       expect(screen.getByRole('link', { name: 'Início' })).toHaveFocus();
+      await userEvent.tab();
+      expect(within(menu()).getByRole('link', { name: 'Novo processo' })).toHaveFocus();
       await userEvent.tab();
       expect(screen.getByRole('button', { name: 'Fechar menu' })).toHaveFocus();
       await userEvent.tab({ shift: true });
-      expect(screen.getByRole('link', { name: 'Início' })).toHaveFocus();
+      expect(within(menu()).getByRole('link', { name: 'Novo processo' })).toHaveFocus();
     });
   });
 

@@ -9,6 +9,12 @@ export const DEMO_USER = {
   senha: 'Espma@2026',
 };
 
+// Segundo acesso de demonstração: o representante da UNDB é quem cria processos (RF-06).
+export const DEMO_USER_IES = {
+  email: 'representante@undb.edu.br',
+  senha: 'Undb@2026',
+};
+
 export function isAuthMock(): boolean {
   return import.meta.env.VITE_AUTH_MOCK === 'true';
 }
@@ -16,19 +22,24 @@ export function isAuthMock(): boolean {
 async function loginMock({ email, senha }: LoginPayload): Promise<LoginResponse> {
   await new Promise((resolve) => setTimeout(resolve, 500));
 
-  if (email.toLowerCase() !== DEMO_USER.email || senha !== DEMO_USER.senha) {
+  const ehCoordenacao = email.toLowerCase() === DEMO_USER.email && senha === DEMO_USER.senha;
+  const ehRepresentante =
+    email.toLowerCase() === DEMO_USER_IES.email && senha === DEMO_USER_IES.senha;
+  if (!ehCoordenacao && !ehRepresentante) {
     throw new Error('Credenciais inválidas.');
   }
 
   return {
     accessToken: 'demo-access-token',
     refreshToken: 'demo-refresh-token',
-    usuario: {
-      id: 'demo',
-      email: DEMO_USER.email,
-      perfil: 'coordenacao_ses',
-      instituicao: 'SES-MA',
-    },
+    usuario: ehCoordenacao
+      ? { id: 'demo', email: DEMO_USER.email, perfil: 'coordenacao_ses', instituicao: 'SES-MA' }
+      : {
+          id: 'demo-ies',
+          email: DEMO_USER_IES.email,
+          perfil: 'representante_ies',
+          instituicao: 'UNDB',
+        },
   };
 }
 

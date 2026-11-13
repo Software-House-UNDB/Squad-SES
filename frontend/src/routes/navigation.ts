@@ -1,4 +1,4 @@
-import { FileText, House, Pen, Settings, User, type LucideIcon } from 'lucide-react';
+import { FilePlus2, FileText, House, Pen, Settings, User, type LucideIcon } from 'lucide-react';
 import type { Perfil } from '../types/auth.ts';
 import { ACCESS } from './permissions.ts';
 
@@ -26,6 +26,12 @@ export const NAV_SECTIONS: NavSection[] = [
     // Itens do representante_ies (RF-02 — envio de ofícios e pacotes) entram na Sprint 1
     // em navigation.ts e App.tsx.
     items: [
+      {
+        to: '/gerenciamento/novo-processo',
+        label: 'Novo processo',
+        icon: FilePlus2,
+        perfis: ACCESS.novoProcesso,
+      },
       {
         to: '/gerenciamento/analise-oficios',
         label: 'Análise de Ofícios',

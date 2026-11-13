@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeServer } from '../test-utils.tsx';
-import { DEMO_USER, isAuthMock, login } from './authService.ts';
+import { DEMO_USER, DEMO_USER_IES, isAuthMock, login } from './authService.ts';
 
 // Unitário (caixa branca): os dois caminhos do login, API real e demonstração.
 describe('authService.login', () => {
@@ -52,6 +52,12 @@ describe('authService.login', () => {
       expect(resposta.usuario.perfil).toBe('coordenacao_ses');
       expect(resposta.accessToken).toBeTruthy();
       expect(resposta.refreshToken).toBeTruthy();
+    });
+
+    it('aceita o acesso do representante da IES e devolve o perfil dele', async () => {
+      vi.stubEnv('VITE_AUTH_MOCK', 'true');
+      const resposta = await login({ email: DEMO_USER_IES.email, senha: DEMO_USER_IES.senha });
+      expect(resposta.usuario.perfil).toBe('representante_ies');
     });
 
     it.each([

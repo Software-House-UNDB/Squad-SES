@@ -5,6 +5,8 @@ import type { Perfil } from '../types/auth.ts';
 // submissão (criar lote, submeter pacote) entram na Sprint 1 e devem ser adicionadas aqui. A lacuna é
 // esperada: este PR cobre apenas a infraestrutura de autenticação.
 export const ACCESS = {
+  // RF-06: quem cria o processo e monta o pacote é o representante da IES, não a coordenação.
+  novoProcesso: ['representante_ies'],
   analiseOficios: ['coordenacao_ses'],
   assinaturaTermos: ['coordenacao_ses'],
   administracao: ['coordenacao_ses'],

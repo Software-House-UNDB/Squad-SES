@@ -4,7 +4,7 @@ import AuthLayout from '../components/AuthLayout.tsx';
 import { useAuth } from '../auth/useAuth.ts';
 import { homeFor } from '../routes/permissions.ts';
 import { getErrorMessage } from '../services/api.ts';
-import { DEMO_USER, isAuthMock } from '../services/authService.ts';
+import { DEMO_USER, DEMO_USER_IES, isAuthMock } from '../services/authService.ts';
 import '../styles/forms.css';
 
 const initialForm = {
@@ -75,6 +75,9 @@ export default function Login() {
             <strong>Acesso de demonstração</strong>
             <span>{DEMO_USER.email}</span>
             <span>{DEMO_USER.senha}</span>
+            <strong>Representante da IES</strong>
+            <span>{DEMO_USER_IES.email}</span>
+            <span>{DEMO_USER_IES.senha}</span>
           </div>
         )}
 
