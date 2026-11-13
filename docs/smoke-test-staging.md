@@ -92,18 +92,18 @@ Valida que documentos anexados a um processo vão para o B2 e voltam por URL ass
 ### Pré-requisitos
 
 - [ ] Nível 2 passando (precisa de auth real)
-- [ ] `documentos.controller.ts` com `POST /processos/{id}/documentos` (upload) e `GET /documentos/{id}/url` (download via URL assinada) — Sprint 2
+- [ ] `documentos.controller.ts` com `POST /processos/:processoId/documentos` (upload) e `GET /processos/:processoId/documentos/:id/url` (download via URL assinada) — Sprint 2
 - [ ] Integração `@aws-sdk/client-s3` apontando pros endpoints do B2
-- [ ] Bucket `ses-docs` com Application Key `ses-prod` injetada no Render (`S3_*` vars do `.env.example`)
+- [ ] Bucket `ses-docs-staging-undb` com Application Key `ses-staging-backend` injetada no Render (`S3_*` vars do `.env.example`)
 
 ### Checklist
 
-- [ ] Upload de PDF 1 MB via `POST /processos/{id}/documentos` → HTTP 201 + id do documento
+- [ ] Upload de PDF 1 MB via `POST /processos/:processoId/documentos` → HTTP 201 + id do documento
 - [ ] Hash SHA-256 do arquivo retornado bate com o hash calculado localmente (integridade)
-- [ ] `GET /documentos/{id}/url` → HTTP 200 + URL assinada válida por tempo limitado
+- [ ] `GET /processos/:processoId/documentos/:id/url` → HTTP 200 + URL assinada válida por tempo limitado
 - [ ] Baixar pela URL assinada e comparar bytes — idênticos ao original
 - [ ] Upload maior que limite configurado → HTTP 413 (nunca 500)
-- [ ] Tentar baixar documento de outro processo (sem permissão) → HTTP 403
+- [ ] Tentar baixar documento de outro processo (sem permissão) → HTTP 404 (comportamento intencional: não vaza existência do processo)
 - [ ] Listar objetos no painel B2 (manual) — confirmar que o arquivo está lá, não ficou só no FS do Render
 
 ### Critério de PASS
