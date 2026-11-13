@@ -14,8 +14,8 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes, ApiHeader, ApiTags } from '@nestjs/swagger';
-import { AuthTemporarioGuard } from '../auth/auth-temporario.guard.js';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { UsuarioAtual, type UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import { AtualizarEstagiarioDto, CriarEstagiarioDto } from './dto/estagiario.dto.js';
 import { EstagiariosService } from './estagiarios.service.js';
@@ -23,8 +23,8 @@ import { EstagiariosService } from './estagiarios.service.js';
 const TAMANHO_MAXIMO_CSV = 1024 * 1024;
 
 @ApiTags('estagiarios')
-@ApiHeader({ name: 'x-usuario-id', description: 'Temporário, até o JWT' })
-@UseGuards(AuthTemporarioGuard)
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('processos/:processoId/estagiarios')
 export class EstagiariosController {
   constructor(private readonly estagiarios: EstagiariosService) {}
