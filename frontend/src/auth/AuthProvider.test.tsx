@@ -10,7 +10,7 @@ describe('encerramento de sessão', () => {
   beforeEach(() => clearSession());
 
   it('"Sair" no topo limpa a sessão e volta para o login', async () => {
-    loginAs('coordenacao_ses');
+    loginAs('COORDENACAO_SES');
     renderApp('/gerenciamento/analise-oficios');
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Sair' }));
@@ -20,7 +20,7 @@ describe('encerramento de sessão', () => {
   });
 
   it('ao sair, descarta os dados em cache para não vazar para o próximo usuário', async () => {
-    loginAs('coordenacao_ses');
+    loginAs('COORDENACAO_SES');
     queryClient.setQueryData(['processos'], [{ id: 1 }]);
     renderApp('/gerenciamento/analise-oficios');
 
@@ -30,7 +30,7 @@ describe('encerramento de sessão', () => {
   });
 
   it('"Sair" do dashboard também encerra a sessão', async () => {
-    loginAs('representante_ies');
+    loginAs('REPRESENTANTE_UNDB');
     renderApp('/dashboard');
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Sair' }));
@@ -40,7 +40,7 @@ describe('encerramento de sessão', () => {
   });
 
   it('expiração de sessão (evento do interceptor) leva o usuário ao login', () => {
-    loginAs('representante_ies');
+    loginAs('REPRESENTANTE_UNDB');
     renderApp('/dashboard');
     expect(screen.getByRole('heading', { name: 'Bem-vindo(a) ao SAGES!' })).toBeInTheDocument();
 

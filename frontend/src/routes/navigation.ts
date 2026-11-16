@@ -23,7 +23,7 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: 'Gerenciamento',
-    // Itens do representante_ies (RF-02 — envio de ofícios e pacotes) entram na Sprint 1
+    // Itens do REPRESENTANTE_UNDB (RF-02 — envio de ofícios e pacotes) entram na Sprint 1
     // em navigation.ts e App.tsx.
     items: [
       {
@@ -61,8 +61,8 @@ export const NAV_SECTIONS: NavSection[] = [
 ];
 
 export const PERFIL_LABEL: Record<Perfil, string> = {
-  coordenacao_ses: 'Coordenação SES',
-  representante_ies: 'Representante da IES',
+  COORDENACAO_SES: 'Coordenação SES',
+  REPRESENTANTE_UNDB: 'Representante da IES',
 };
 
 /** Menu do perfil: remove itens sem permissão e seções que ficaram vazias. */

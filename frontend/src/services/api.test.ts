@@ -12,7 +12,7 @@ import { api, getErrorMessage } from './api.ts';
 const usuario = {
   id: '1',
   email: 'f@x.com',
-  perfil: 'coordenacao_ses',
+  perfil: 'COORDENACAO_SES',
   instituicao: null,
 } as const;
 

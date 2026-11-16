@@ -45,7 +45,7 @@ describe('fluxo de login (API real)', () => {
   });
 
   it('coordenação cai na análise de ofícios e a sessão fica guardada', async () => {
-    servidorAutenticaComo('coordenacao_ses');
+    servidorAutenticaComo('COORDENACAO_SES');
     renderApp('/login');
 
     await preencherEEnviar();
@@ -56,7 +56,7 @@ describe('fluxo de login (API real)', () => {
   });
 
   it('representante da IES cai no dashboard', async () => {
-    servidorAutenticaComo('representante_ies');
+    servidorAutenticaComo('REPRESENTANTE_UNDB');
     renderApp('/login');
 
     await preencherEEnviar();
@@ -67,7 +67,7 @@ describe('fluxo de login (API real)', () => {
   });
 
   it('depois do login volta para a página que o usuário tentou abrir', async () => {
-    servidorAutenticaComo('coordenacao_ses');
+    servidorAutenticaComo('COORDENACAO_SES');
     renderApp('/administracao/usuarios');
     expect(heading('Entrar')).toBeInTheDocument();
 

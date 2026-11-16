@@ -11,7 +11,7 @@ describe('authService.login', () => {
       const resposta = {
         accessToken: 'a',
         refreshToken: 'r',
-        usuario: { id: '1', email: 'x@y.com', perfil: 'coordenacao_ses', instituicao: null },
+        usuario: { id: '1', email: 'x@y.com', perfil: 'COORDENACAO_SES', instituicao: null },
       };
       const recebido: Array<{ method?: string; url?: string; body: unknown }> = [];
       fakeServer((config) => {
@@ -49,7 +49,7 @@ describe('authService.login', () => {
         email: DEMO_USER.email.toUpperCase(),
         senha: DEMO_USER.senha,
       });
-      expect(resposta.usuario.perfil).toBe('coordenacao_ses');
+      expect(resposta.usuario.perfil).toBe('COORDENACAO_SES');
       expect(resposta.accessToken).toBeTruthy();
       expect(resposta.refreshToken).toBeTruthy();
     });
@@ -57,7 +57,7 @@ describe('authService.login', () => {
     it('aceita o acesso do representante da IES e devolve o perfil dele', async () => {
       vi.stubEnv('VITE_AUTH_MOCK', 'true');
       const resposta = await login({ email: DEMO_USER_IES.email, senha: DEMO_USER_IES.senha });
-      expect(resposta.usuario.perfil).toBe('representante_ies');
+      expect(resposta.usuario.perfil).toBe('REPRESENTANTE_UNDB');
     });
 
     it.each([

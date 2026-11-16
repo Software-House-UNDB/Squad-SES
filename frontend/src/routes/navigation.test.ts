@@ -6,7 +6,7 @@ const links = (perfil: Parameters<typeof navFor>[0]) =>
 
 describe('menu por perfil', () => {
   it('coordenação vê gerenciamento e administração', () => {
-    expect(links('coordenacao_ses')).toEqual([
+    expect(links('COORDENACAO_SES')).toEqual([
       '/dashboard',
       '/gerenciamento/analise-oficios',
       '/gerenciamento/assinatura-termos',
@@ -16,8 +16,8 @@ describe('menu por perfil', () => {
   });
 
   it('representante da IES vê início e novo processo, sem seções vazias', () => {
-    expect(links('representante_ies')).toEqual(['/dashboard', '/gerenciamento/novo-processo']);
-    expect(navFor('representante_ies')).toHaveLength(2);
+    expect(links('REPRESENTANTE_UNDB')).toEqual(['/dashboard', '/gerenciamento/novo-processo']);
+    expect(navFor('REPRESENTANTE_UNDB')).toHaveLength(2);
   });
 });
 

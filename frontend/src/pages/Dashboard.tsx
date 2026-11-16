@@ -7,8 +7,8 @@ import type { Perfil } from '../types/auth.ts';
 import './Dashboard.css';
 
 const BOAS_VINDAS: Record<Perfil, string> = {
-  coordenacao_ses: 'Acompanhe os ofícios enviados pelas instituições e os termos aguardando assinatura.',
-  representante_ies:
+  COORDENACAO_SES: 'Acompanhe os ofícios enviados pelas instituições e os termos aguardando assinatura.',
+  REPRESENTANTE_UNDB:
     'O envio de ofícios e pacotes de documentos da sua instituição estará disponível aqui em breve.',
 };
 

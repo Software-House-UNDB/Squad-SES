@@ -6,7 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 // Caixa preta de ponta a ponta no cliente: Axios real -> HTTP real -> backend falso em Node.
 // Diferente dos outros testes, nada do Axios é simulado: valem as regras de CORS, preflight e JSON.
 
-const USUARIO = { id: '1', email: 'coord@x.com', perfil: 'coordenacao_ses', instituicao: 'SES-MA' };
+const USUARIO = { id: '1', email: 'coord@x.com', perfil: 'COORDENACAO_SES', instituicao: 'SES-MA' };
 
 const servidor = {
   accessValido: 'A1',

@@ -33,11 +33,11 @@ async function loginMock({ email, senha }: LoginPayload): Promise<LoginResponse>
     accessToken: 'demo-access-token',
     refreshToken: 'demo-refresh-token',
     usuario: ehCoordenacao
-      ? { id: 'demo', email: DEMO_USER.email, perfil: 'coordenacao_ses', instituicao: 'SES-MA' }
+      ? { id: 'demo', email: DEMO_USER.email, perfil: 'COORDENACAO_SES', instituicao: 'SES-MA' }
       : {
           id: 'demo-ies',
           email: DEMO_USER_IES.email,
-          perfil: 'representante_ies',
+          perfil: 'REPRESENTANTE_UNDB',
           instituicao: 'UNDB',
         },
   };

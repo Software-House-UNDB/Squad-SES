@@ -25,7 +25,7 @@ describe('rotas protegidas por perfil', () => {
   });
 
   it('coordenação acessa a análise de ofícios', () => {
-    loginAs('coordenacao_ses');
+    loginAs('COORDENACAO_SES');
     renderApp('/gerenciamento/analise-oficios');
     expect(heading('Análise de Ofícios')).toBeInTheDocument();
   });
@@ -33,7 +33,7 @@ describe('rotas protegidas por perfil', () => {
   it.each(['/gerenciamento/assinatura-termos', '/administracao/usuarios'])(
     'coordenação acessa %s',
     (path) => {
-      loginAs('coordenacao_ses');
+      loginAs('COORDENACAO_SES');
       renderApp(path);
       expect(screen.queryByRole('heading', { name: 'Acesso negado' })).not.toBeInTheDocument();
     },
@@ -45,25 +45,25 @@ describe('rotas protegidas por perfil', () => {
     '/administracao/usuarios',
     '/administracao/configuracoes',
   ])('representante da IES não acessa %s', (path) => {
-    loginAs('representante_ies');
+    loginAs('REPRESENTANTE_UNDB');
     renderApp(path);
     expect(heading('Acesso negado')).toBeInTheDocument();
   });
 
   it('representante da IES acessa o dashboard', () => {
-    loginAs('representante_ies');
+    loginAs('REPRESENTANTE_UNDB');
     renderApp('/dashboard');
     expect(heading('Bem-vindo(a) ao SAGES!')).toBeInTheDocument();
   });
 
   it('usuário autenticado que abre /login vai para a tela inicial do seu perfil', () => {
-    loginAs('coordenacao_ses');
+    loginAs('COORDENACAO_SES');
     renderApp('/login');
     expect(heading('Análise de Ofícios')).toBeInTheDocument();
   });
 
   it('rota desconhecida leva o representante para o dashboard', () => {
-    loginAs('representante_ies');
+    loginAs('REPRESENTANTE_UNDB');
     renderApp('/qualquer-coisa');
     expect(heading('Bem-vindo(a) ao SAGES!')).toBeInTheDocument();
   });
@@ -78,13 +78,13 @@ describe('novo processo', () => {
   beforeEach(() => clearSession());
 
   it('representante da IES abre a tela', () => {
-    loginAs('representante_ies');
+    loginAs('REPRESENTANTE_UNDB');
     renderApp('/gerenciamento/novo-processo');
     expect(heading('Novo processo de documentação')).toBeInTheDocument();
   });
 
   it('coordenação não cria processo (RF-06)', () => {
-    loginAs('coordenacao_ses');
+    loginAs('COORDENACAO_SES');
     renderApp('/gerenciamento/novo-processo');
     expect(heading('Acesso negado')).toBeInTheDocument();
   });
