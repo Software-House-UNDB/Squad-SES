@@ -39,7 +39,14 @@ describe('rotas protegidas por perfil', () => {
     },
   );
 
+  it('coordenação abre a análise de um processo', async () => {
+    loginAs('COORDENACAO_SES');
+    renderApp('/gerenciamento/processos/demo');
+    expect(await screen.findByRole('heading', { name: 'Processo 2026/014' })).toBeInTheDocument();
+  });
+
   it.each([
+    '/gerenciamento/processos/demo',
     '/gerenciamento/analise-oficios',
     '/gerenciamento/assinatura-termos',
     '/administracao/usuarios',

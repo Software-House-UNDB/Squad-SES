@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard.tsx';
 import AcessoNegado from './pages/AcessoNegado.tsx';
 import AppShell from './components/layout/AppShell.tsx';
 import OficiosLista from './pages/Oficios/OficiosLista.tsx';
+import AnaliseProcesso from './pages/AnaliseProcesso/AnaliseProcesso.tsx';
 import NovoProcesso from './pages/NovoProcesso/NovoProcesso.tsx';
 import Placeholder from './pages/Placeholder.tsx';
 import ProtectedRoute from './routes/ProtectedRoute.tsx';
@@ -33,6 +34,10 @@ export default function App() {
 
           <Route element={<ProtectedRoute perfis={ACCESS.analiseOficios} />}>
             <Route path="/gerenciamento/analise-oficios" element={<OficiosLista />} />
+          </Route>
+
+          <Route element={<ProtectedRoute perfis={ACCESS.analiseProcesso} />}>
+            <Route path="/gerenciamento/processos/:id" element={<AnaliseProcesso />} />
           </Route>
 
           <Route element={<ProtectedRoute perfis={ACCESS.assinaturaTermos} />}>
