@@ -29,14 +29,17 @@ const MSG_ERRO_ACAO = 'Não foi possível concluir a análise. Nada foi alterado
 const MSG_STATUS_MUDOU =
   'O status deste processo mudou. Recarregue a página para ver a situação atual.';
 
-/** Por que a coordenação não pode decidir os documentos agora; `null` = pode. */
-function motivoSomenteLeitura(status: StatusProcesso): string | null {
-  if (podeDecidir(status)) return null;
+/**
+ * Aviso no lugar dos botões de decisão quando o processo não está em análise.
+ * `enviado` não tem aviso aqui: o resumo já traz o convite para iniciar a análise.
+ */
+function avisoDoDetalhe(status: StatusProcesso): string | null {
   switch (status) {
+    case 'em_analise':
+    case 'enviado':
+      return null;
     case 'rascunho':
       return 'Este processo ainda é um rascunho e não foi enviado pela UNDB.';
-    case 'enviado':
-      return 'Inicie a análise para decidir os documentos.';
     case 'pendencia':
       return 'Processo devolvido: aguardando a correção da UNDB.';
     case 'aprovado':
@@ -196,7 +199,8 @@ export default function AnaliseProcesso() {
             <DetalheDocumento
               key={selecionado.id}
               documento={selecionado}
-              somenteLeitura={motivoSomenteLeitura(processo.status)}
+              podeDecidir={podeDecidir(processo.status)}
+              aviso={avisoDoDetalhe(processo.status)}
               ocupado={ocupado}
               onAprovar={() => aprovarDocumento(selecionado)}
               onPendencia={(texto) => apontarPendencia(selecionado, texto)}

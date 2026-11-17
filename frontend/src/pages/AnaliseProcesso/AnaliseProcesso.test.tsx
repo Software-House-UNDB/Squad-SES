@@ -43,7 +43,12 @@ describe('AnaliseProcesso', () => {
     expect(await screen.findByRole('heading', { name: 'Processo 2026/014' })).toBeInTheDocument();
     expect(screen.getAllByText('Enviado').length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: 'Aprovar documento' })).not.toBeInTheDocument();
-    expect(screen.getByText(/Inicie a análise para decidir/)).toBeInTheDocument();
+    // O aviso aparece uma vez, no resumo; os documentos não o repetem.
+    const aviso = screen.getAllByText(/Inicie a análise para decidir/);
+    expect(aviso).toHaveLength(1);
+    expect(within(screen.getByRole('region', { name: 'Resumo da análise' })).getByText(/Inicie a análise para decidir/)).toBeInTheDocument();
+    await userEvent.click(naLista(/Apólice de seguro/));
+    expect(screen.getAllByText(/Inicie a análise para decidir/)).toHaveLength(1);
 
     await userEvent.click(botao('Iniciar análise'));
     expect(await screen.findByRole('button', { name: 'Aprovar documento' })).toBeInTheDocument();

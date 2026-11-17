@@ -92,6 +92,7 @@ export default function ResumoAnalise({ processo, ocupado, erro, onIniciar, onAp
         )}
       </div>
 
+      {status === 'enviado' && <p className="ap-dica">Inicie a análise para decidir os documentos.</p>}
       {status === 'em_analise' && !podeAprovarProcesso(status, documentos) && (
         <p className="ap-dica">
           Para aprovar o processo, todos os documentos precisam estar aprovados (RF-08).

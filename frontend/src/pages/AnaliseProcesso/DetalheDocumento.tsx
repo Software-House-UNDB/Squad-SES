@@ -25,8 +25,10 @@ const formatarData = (iso: string) =>
 
 interface Props {
   documento: DocumentoAnalise;
-  /** Mensagem para quando a coordenação ainda não pode (ou não pode mais) decidir. */
-  somenteLeitura: string | null;
+  /** A coordenação pode decidir este documento agora (processo em análise). */
+  podeDecidir: boolean;
+  /** Aviso no lugar dos botões quando não pode decidir; sem aviso, a seção some. */
+  aviso: string | null;
   ocupado: boolean;
   onAprovar: () => void;
   onPendencia: (comentario: string) => void;
@@ -35,7 +37,8 @@ interface Props {
 /** Dados do documento selecionado, decisão da coordenação e histórico de comentários (RF-12). */
 export default function DetalheDocumento({
   documento: d,
-  somenteLeitura,
+  podeDecidir,
+  aviso,
   ocupado,
   onAprovar,
   onPendencia,
@@ -88,8 +91,8 @@ export default function DetalheDocumento({
         <ExternalLink size={15} aria-hidden="true" /> Abrir PDF
       </button>
 
-      {somenteLeitura ? (
-        <p className="ap-aviso">{somenteLeitura}</p>
+      {!podeDecidir ? (
+        aviso && <p className="ap-aviso">{aviso}</p>
       ) : (
         <div className="ap-decisao">
           {!apontando && (
