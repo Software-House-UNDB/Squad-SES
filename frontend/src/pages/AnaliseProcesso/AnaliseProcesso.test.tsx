@@ -98,8 +98,11 @@ describe('AnaliseProcesso', () => {
     await userEvent.click(botao('Aprovar processo'));
     const dialogo = await screen.findByRole('dialog');
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar aprovação' }));
-    expect(await screen.findAllByText('Aguardando assinaturas')).not.toHaveLength(0);
+    // Fica em `aprovado` (RF-07): o sistema gera os TCEs antes de virar aguardando_assinaturas.
+    expect(await screen.findByText(/o sistema gera os TCEs/i)).toBeInTheDocument();
+    expect(screen.queryByText('Aguardando assinaturas')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Aprovar documento' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Aprovar processo' })).not.toBeInTheDocument();
   });
 
   it('devolver com pendência só habilita com ao menos uma pendência', async () => {

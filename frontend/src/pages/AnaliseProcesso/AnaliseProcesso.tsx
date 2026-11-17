@@ -39,6 +39,8 @@ function motivoSomenteLeitura(status: StatusProcesso): string | null {
       return 'Inicie a análise para decidir os documentos.';
     case 'pendencia':
       return 'Processo devolvido: aguardando a correção da UNDB.';
+    case 'aprovado':
+      return 'Processo aprovado: o sistema gera os TCEs e, em seguida, libera as assinaturas.';
     default:
       return 'Análise concluída. Este processo não pode mais ser alterado aqui.';
   }

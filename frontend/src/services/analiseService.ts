@@ -181,7 +181,11 @@ export async function decidirDocumento(
   return copia(processo);
 }
 
-/** em_analise → aprovado (→ aguardando_assinaturas, quando o sistema gera os TCEs) ou → pendencia. */
+/**
+ * em_analise → aprovado ou → pendencia.
+ * `aprovado` é um estado persistido: nele o sistema gera os TCEs e só então o processo vira
+ * aguardando_assinaturas. Esse segundo passo é do backend, não desta tela.
+ */
 export async function concluirAnalise(
   id: string,
   resultado: Extract<StatusProcesso, 'aprovado' | 'pendencia'>,
@@ -193,6 +197,6 @@ export async function concluirAnalise(
       ? podeAprovarProcesso(processo.status, processo.documentos)
       : podeDevolverProcesso(processo.status, processo.documentos);
   if (!permitido) throw new TransicaoInvalidaError();
-  processo.status = resultado === 'aprovado' ? 'aguardando_assinaturas' : 'pendencia';
+  processo.status = resultado;
   return copia(processo);
 }

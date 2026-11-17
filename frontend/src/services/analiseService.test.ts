@@ -43,7 +43,8 @@ describe('analiseService (simulado)', () => {
     await expect(concluirAnalise('demo', 'aprovado')).rejects.toBeInstanceOf(TransicaoInvalidaError);
     let p = await buscarProcessoParaAnalise('demo');
     for (const d of p.documentos) p = await decidirDocumento('demo', d.id, { decisao: 'aprovado' });
-    expect((await concluirAnalise('demo', 'aprovado')).status).toBe('aguardando_assinaturas');
+    // O estado persistido é `aprovado`; a geração dos TCEs (→ aguardando_assinaturas) é passo do sistema.
+    expect((await concluirAnalise('demo', 'aprovado')).status).toBe('aprovado');
   });
 
   it('devolver exige ao menos uma pendência', async () => {
