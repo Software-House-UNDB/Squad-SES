@@ -10,7 +10,7 @@ describe('shell da área autenticada', () => {
   beforeEach(() => clearSession());
 
   it('coordenação vê o menu completo e a identidade no header', () => {
-    loginAs('coordenacao_ses');
+    loginAs('COORDENACAO_SES');
     renderApp('/dashboard');
 
     const links = within(menu())
@@ -28,7 +28,7 @@ describe('shell da área autenticada', () => {
   });
 
   it('representante da IES vê só início e novo processo', () => {
-    loginAs('representante_ies');
+    loginAs('REPRESENTANTE_UNDB');
     renderApp('/dashboard');
 
     expect(within(menu()).getAllByRole('link')).toHaveLength(2);
@@ -36,7 +36,7 @@ describe('shell da área autenticada', () => {
   });
 
   it('marca a página atual no menu', () => {
-    loginAs('coordenacao_ses');
+    loginAs('COORDENACAO_SES');
     renderApp('/gerenciamento/analise-oficios');
 
     expect(within(menu()).getByRole('link', { name: 'Análise de Ofícios' })).toHaveAttribute(
@@ -46,7 +46,7 @@ describe('shell da área autenticada', () => {
   });
 
   it('o menu também mostra e-mail, perfil e instituição (visíveis no mobile)', () => {
-    loginAs('representante_ies');
+    loginAs('REPRESENTANTE_UNDB');
     renderApp('/dashboard');
 
     const aside = screen.getByRole('complementary');
@@ -57,7 +57,7 @@ describe('shell da área autenticada', () => {
 
   describe('gaveta do menu', () => {
     it('foca o menu ao abrir e devolve o foco ao botão ao fechar com Esc', async () => {
-      loginAs('coordenacao_ses');
+      loginAs('COORDENACAO_SES');
       renderApp('/dashboard');
 
       const abrir = screen.getByRole('button', { name: 'Abrir menu' });
@@ -71,7 +71,7 @@ describe('shell da área autenticada', () => {
     });
 
     it('mantém o Tab dentro do menu enquanto está aberto', async () => {
-      loginAs('representante_ies');
+      loginAs('REPRESENTANTE_UNDB');
       renderApp('/dashboard');
       await userEvent.click(screen.getByRole('button', { name: 'Abrir menu' }));
 
@@ -88,7 +88,7 @@ describe('shell da área autenticada', () => {
   });
 
   it('sair encerra a sessão e volta ao login', async () => {
-    loginAs('representante_ies');
+    loginAs('REPRESENTANTE_UNDB');
     renderApp('/dashboard');
 
     await userEvent.click(screen.getByRole('button', { name: 'Sair' }));

@@ -9,7 +9,7 @@ describe('acesso negado', () => {
   beforeEach(() => clearSession());
 
   it('"Voltar ao início" leva o representante ao dashboard, a sua tela inicial', async () => {
-    loginAs('representante_ies');
+    loginAs('REPRESENTANTE_UNDB');
     renderApp('/administracao/usuarios');
     expect(screen.getByRole('heading', { name: 'Acesso negado' })).toBeInTheDocument();
 

@@ -28,37 +28,37 @@ describe('ProtectedRoute', () => {
   });
 
   it('sem sessão manda para o login mesmo exigindo um perfil', () => {
-    renderGuard(['coordenacao_ses']);
+    renderGuard(['COORDENACAO_SES']);
     expect(screen.getByText('tela de login')).toBeInTheDocument();
   });
 
   it('sem lista de perfis, qualquer usuário autenticado entra', () => {
-    loginAs('representante_ies');
+    loginAs('REPRESENTANTE_UNDB');
     renderGuard();
     expect(screen.getByText('conteúdo protegido')).toBeInTheDocument();
   });
 
   it('lista de perfis vazia também libera qualquer usuário autenticado', () => {
-    loginAs('representante_ies');
+    loginAs('REPRESENTANTE_UNDB');
     renderGuard([]);
     expect(screen.getByText('conteúdo protegido')).toBeInTheDocument();
   });
 
   it('perfil permitido entra', () => {
-    loginAs('coordenacao_ses');
-    renderGuard(['coordenacao_ses']);
+    loginAs('COORDENACAO_SES');
+    renderGuard(['COORDENACAO_SES']);
     expect(screen.getByText('conteúdo protegido')).toBeInTheDocument();
   });
 
   it('perfil não permitido vai para acesso negado, não para o login', () => {
-    loginAs('representante_ies');
-    renderGuard(['coordenacao_ses']);
+    loginAs('REPRESENTANTE_UNDB');
+    renderGuard(['COORDENACAO_SES']);
     expect(screen.getByText('tela de acesso negado')).toBeInTheDocument();
   });
 
   it('aceita mais de um perfil', () => {
-    loginAs('representante_ies');
-    renderGuard(['coordenacao_ses', 'representante_ies']);
+    loginAs('REPRESENTANTE_UNDB');
+    renderGuard(['COORDENACAO_SES', 'REPRESENTANTE_UNDB']);
     expect(screen.getByText('conteúdo protegido')).toBeInTheDocument();
   });
 });

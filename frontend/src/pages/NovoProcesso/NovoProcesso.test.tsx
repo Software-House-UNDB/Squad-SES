@@ -31,7 +31,7 @@ const BIA = ['Bia Lima', '11144477735', '2024002'] as const;
 const CAIO = ['Caio Reis', '39053344705', '2024003'] as const;
 
 function abrir() {
-  loginAs('representante_ies');
+  loginAs('REPRESENTANTE_UNDB');
   return renderApp('/gerenciamento/novo-processo');
 }
 
