@@ -109,6 +109,20 @@ describe('lerLote', () => {
     expect(validos[2].dto.menorIdade).toBeUndefined();
   });
 
+  it('aceita VERDADEIRO/FALSO do Excel e acento decomposto', async () => {
+    const { validos, invalidos } = await lerLote(
+      csv(
+        'nome,cpf,matricula,curso,menor_idade,responsavel_nome',
+        'Ana,52998224725,M1,Enfermagem,VERDADEIRO,Maria Souza',
+        'Bia,11144477735,M2,Medicina,FALSO,',
+        `Caio,39053344705,M3,Medicina,${'não'.normalize('NFD')},`,
+      ),
+    );
+
+    expect(invalidos).toEqual([]);
+    expect(validos.map(({ dto }) => dto.menorIdade)).toEqual([true, false, false]);
+  });
+
   it('exige o responsável do menor de idade', async () => {
     const { invalidos } = await lerLote(
       csv(

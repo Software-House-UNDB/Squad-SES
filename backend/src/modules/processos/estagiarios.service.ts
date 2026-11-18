@@ -93,7 +93,14 @@ export class EstagiariosService {
           throw new BadRequestException('data_inicio posterior a data_termino');
         }
 
+        // No PATCH o DTO deixa tudo opcional e o @ValidateIf do RF-13 não
+        // vê o registro gravado; a regra é conferida aqui contra o estado final.
         const menorIdade = dados.menorIdade ?? antes.menorIdade;
+        const responsavel =
+          dados.responsavelNome !== undefined ? dados.responsavelNome : antes.responsavelNome;
+        if (menorIdade && !responsavel) {
+          throw new BadRequestException('nome do responsável é obrigatório para menor de idade');
+        }
         const depois = await tx.estagiario.update({
           where: { id },
           data: menorIdade ? dados : { ...dados, responsavelNome: null },
