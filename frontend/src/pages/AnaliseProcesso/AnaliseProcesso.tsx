@@ -198,6 +198,7 @@ export default function AnaliseProcesso() {
           {selecionado && (
             <DetalheDocumento
               key={selecionado.id}
+              processoId={processo.id}
               documento={selecionado}
               podeDecidir={podeDecidir(processo.status)}
               aviso={avisoDoDetalhe(processo.status)}
