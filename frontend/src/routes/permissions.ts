@@ -8,6 +8,8 @@ export const ACCESS = {
   // RF-06: quem cria o processo e monta o pacote é o representante da IES, não a coordenação.
   novoProcesso: ['REPRESENTANTE_UNDB'],
   analiseOficios: ['COORDENACAO_SES'],
+  // Abertura do processo e análise documento a documento (RF-07, RF-08, RF-12).
+  analiseProcesso: ['COORDENACAO_SES'],
   assinaturaTermos: ['COORDENACAO_SES'],
   administracao: ['COORDENACAO_SES'],
 } satisfies Record<string, Perfil[]>;
