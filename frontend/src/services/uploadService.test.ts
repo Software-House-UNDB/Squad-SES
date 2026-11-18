@@ -36,6 +36,22 @@ describe('enviarDocumento', () => {
     expect((corpo.get('arquivo') as File).name).toBe('apolice.pdf');
   });
 
+  it('o corpo chega ao adaptador como FormData, não como JSON (a instância api usa JSON por padrão)', async () => {
+    let capturado: { data: unknown; contentType: unknown } | undefined;
+    const adaptadorOriginal = api.defaults.adapter;
+    api.defaults.adapter = async (config) => {
+      capturado = { data: config.data, contentType: config.headers.getContentType() };
+      return { data: { id: 'd1', hashSha256: 'abc' }, status: 200, statusText: 'OK', headers: {}, config };
+    };
+    try {
+      await enviarDocumento('p1', dados);
+    } finally {
+      api.defaults.adapter = adaptadorOriginal;
+    }
+    expect(capturado?.data).toBeInstanceOf(FormData);
+    expect(String(capturado?.contentType)).toContain('multipart/form-data');
+  });
+
   it('409 vira ArquivoRepetidoError', async () => {
     vi.spyOn(api, 'post').mockRejectedValue(erroHttp(409));
     await expect(enviarDocumento('p1', dados)).rejects.toBeInstanceOf(ArquivoRepetidoError);

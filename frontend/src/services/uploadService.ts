@@ -52,6 +52,9 @@ export async function enviarDocumento(
 
   try {
     const { data } = await api.post<DocumentoEnviado>(`/processos/${processoId}/documentos`, corpo, {
+      // Não remova: a instância `api` usa application/json por padrão e, com esse tipo, o axios converte o
+      // FormData em JSON. Com multipart ele mantém o FormData e, no navegador, apaga o cabeçalho para o
+      // próprio navegador acrescentar o boundary (resolveConfig do axios). Coberto em uploadService.test.ts.
       headers: { 'Content-Type': 'multipart/form-data' },
       signal,
       onUploadProgress: (e) => {
