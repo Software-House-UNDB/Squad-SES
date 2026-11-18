@@ -8,6 +8,7 @@ import AcessoNegado from './pages/AcessoNegado.tsx';
 import AppShell from './components/layout/AppShell.tsx';
 import OficiosLista from './pages/Oficios/OficiosLista.tsx';
 import NovoProcesso from './pages/NovoProcesso/NovoProcesso.tsx';
+import ListaProcessos from './pages/Processos/ListaProcessos.tsx';
 import Placeholder from './pages/Placeholder.tsx';
 import ProtectedRoute from './routes/ProtectedRoute.tsx';
 import RootRedirect from './routes/RootRedirect.tsx';
@@ -29,6 +30,10 @@ export default function App() {
 
           <Route element={<ProtectedRoute perfis={ACCESS.novoProcesso} />}>
             <Route path="/gerenciamento/novo-processo" element={<NovoProcesso />} />
+          </Route>
+
+          <Route element={<ProtectedRoute perfis={ACCESS.listaProcessos} />}>
+            <Route path="/gerenciamento/processos" element={<ListaProcessos />} />
           </Route>
 
           <Route element={<ProtectedRoute perfis={ACCESS.analiseOficios} />}>

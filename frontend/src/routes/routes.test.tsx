@@ -59,7 +59,7 @@ describe('rotas protegidas por perfil', () => {
   it('usuário autenticado que abre /login vai para a tela inicial do seu perfil', () => {
     loginAs('COORDENACAO_SES');
     renderApp('/login');
-    expect(heading('Análise de Ofícios')).toBeInTheDocument();
+    expect(heading('Processos')).toBeInTheDocument();
   });
 
   it('rota desconhecida leva o representante para o dashboard', () => {
@@ -87,5 +87,31 @@ describe('novo processo', () => {
     loginAs('COORDENACAO_SES');
     renderApp('/gerenciamento/novo-processo');
     expect(heading('Acesso negado')).toBeInTheDocument();
+  });
+});
+
+describe('lista de processos', () => {
+  beforeEach(() => clearSession());
+
+  it('coordenação abre a lista com os processos e os badges de status', () => {
+    loginAs('COORDENACAO_SES');
+    renderApp('/gerenciamento/processos');
+
+    expect(heading('Processos')).toBeInTheDocument();
+    expect(screen.getAllByRole('row')).toHaveLength(5); // cabeçalho + 4 processos
+    for (const status of ['Enviado', 'Em análise', 'Pendência', 'Concluído']) {
+      expect(screen.getByText(status, { selector: '.badge' })).toBeInTheDocument();
+    }
+  });
+
+  it('representante da IES não acessa a lista', () => {
+    loginAs('REPRESENTANTE_UNDB');
+    renderApp('/gerenciamento/processos');
+    expect(heading('Acesso negado')).toBeInTheDocument();
+  });
+
+  it('visitante vai para o login', () => {
+    renderApp('/gerenciamento/processos');
+    expect(heading('Entrar')).toBeInTheDocument();
   });
 });

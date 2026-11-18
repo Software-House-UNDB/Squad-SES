@@ -1,4 +1,13 @@
-import { FilePlus2, FileText, House, Pen, Settings, User, type LucideIcon } from 'lucide-react';
+import {
+  FilePlus2,
+  FileText,
+  FolderOpen,
+  House,
+  Pen,
+  Settings,
+  User,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Perfil } from '../types/auth.ts';
 import { ACCESS } from './permissions.ts';
 
@@ -33,6 +42,12 @@ export const NAV_SECTIONS: NavSection[] = [
         perfis: ACCESS.novoProcesso,
       },
       {
+        to: '/gerenciamento/processos',
+        label: 'Processos',
+        icon: FolderOpen,
+        perfis: ACCESS.listaProcessos,
+      },
+      {
         to: '/gerenciamento/analise-oficios',
         label: 'Análise de Ofícios',
         icon: FileText,
@@ -49,7 +64,12 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Administração',
     items: [
-      { to: '/administracao/usuarios', label: 'Usuários', icon: User, perfis: ACCESS.administracao },
+      {
+        to: '/administracao/usuarios',
+        label: 'Usuários',
+        icon: User,
+        perfis: ACCESS.administracao,
+      },
       {
         to: '/administracao/configuracoes',
         label: 'Configurações',
