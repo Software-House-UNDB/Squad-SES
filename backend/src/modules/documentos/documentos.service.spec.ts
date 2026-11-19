@@ -137,6 +137,21 @@ describe('DocumentosService.enviar', () => {
     expect(tx.documento.create).not.toHaveBeenCalled();
   });
 
+  it('responde 409 e apaga o objeto quando o índice único barra a corrida de duplicata', async () => {
+    const { tx, storage, auditoria, service } = montar();
+    tx.documento.create.mockRejectedValue(
+      Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }),
+    );
+
+    const envio = service.enviar('p1', PDF, { tipo: TipoDocumento.anexo }, USUARIO);
+
+    await expect(envio).rejects.toBeInstanceOf(ConflictException);
+    await expect(envio).rejects.toThrow('Documento já enviado neste processo');
+    const [chave] = storage.enviar.mock.calls[0];
+    expect(storage.remover).toHaveBeenCalledWith(chave);
+    expect(auditoria.registrar).not.toHaveBeenCalled();
+  });
+
   it('apaga o objeto se a gravação no banco falhar', async () => {
     const { tx, storage, service } = montar();
     tx.documento.create.mockRejectedValue(new Error('banco fora'));

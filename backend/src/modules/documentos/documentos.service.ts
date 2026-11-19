@@ -16,6 +16,7 @@ import {
 import { EnviarDocumentoDto } from './dto/documento.dto.js';
 
 const VALIDADE_URL_SEGUNDOS = 5 * 60;
+const MENSAGEM_DUPLICADO = 'Documento já enviado neste processo';
 
 // A chave do objeto não sai na API: o acesso é só pela URL assinada.
 function semChave({ storageKey: _chave, ...documento }: Documento) {
@@ -85,6 +86,11 @@ export class DocumentosService {
       return semChave(documento);
     } catch (erro) {
       await this.removerObjeto(storageKey);
+      // Corrida de duplo clique: as duas requisições passaram pelo findFirst,
+      // e o índice único (processo_id, hash_sha256) barrou a segunda.
+      if ((erro as { code?: string }).code === 'P2002') {
+        throw new ConflictException(MENSAGEM_DUPLICADO);
+      }
       throw erro;
     }
   }
@@ -147,7 +153,7 @@ export class DocumentosService {
       where: { processoId, hashSha256 },
       select: { id: true },
     });
-    if (duplicado) throw new ConflictException('Documento já enviado neste processo');
+    if (duplicado) throw new ConflictException(MENSAGEM_DUPLICADO);
   }
 
   private async obter(cliente: Prisma.TransactionClient, processoId: string, id: string) {
