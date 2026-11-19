@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Perfil, TipoDocumento } from '../../generated/prisma/enums.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import type { StorageService } from '../../storage/storage.service.js';
@@ -8,6 +13,7 @@ import { calcularSha256 } from './arquivo.js';
 import { DocumentosService } from './documentos.service.js';
 
 const USUARIO = { id: 'u1', perfil: Perfil.REPRESENTANTE_UNDB };
+const COORDENACAO = { id: 'coord', perfil: Perfil.COORDENACAO_SES };
 const PDF = { buffer: Buffer.from('%PDF-1.7 conteúdo'), originalname: 'termo.pdf' };
 const DOCUMENTO = {
   id: 'd1',
@@ -15,6 +21,7 @@ const DOCUMENTO = {
   nomeArquivo: 'termo.pdf',
   mimeType: 'application/pdf',
   storageKey: 'processos/p1/chave.pdf',
+  enviadoPorId: 'u1',
 };
 
 function montar() {
@@ -36,7 +43,11 @@ function montar() {
     remover: vi.fn(),
     urlAssinada: vi.fn().mockResolvedValue('https://storage/assinada'),
   };
-  const processos = { obterEditavel: vi.fn(), garantirAcesso: vi.fn() };
+  const processos = {
+    obterEditavel: vi.fn(),
+    obterParaRetorno: vi.fn(),
+    garantirAcesso: vi.fn(),
+  };
   const auditoria = { registrar: vi.fn() };
   const service = new DocumentosService(
     prisma as unknown as PrismaService,
@@ -195,5 +206,79 @@ describe('DocumentosService.remover', () => {
     storage.remover.mockRejectedValue(new Error('B2 fora'));
 
     await expect(service.remover('p1', 'd1', USUARIO)).resolves.toBeUndefined();
+  });
+});
+
+describe('DocumentosService: retorno da coordenação (#24)', () => {
+  it('envia documento de retorno pela regra da coordenação, não pela do criador', async () => {
+    const { tx, storage, processos, service } = montar();
+
+    await service.enviar('p1', PDF, { tipo: TipoDocumento.oficio }, COORDENACAO);
+
+    expect(processos.obterParaRetorno).toHaveBeenCalledWith(expect.anything(), 'p1', COORDENACAO);
+    expect(processos.obterEditavel).not.toHaveBeenCalled();
+    expect(storage.enviar).toHaveBeenCalled();
+    expect(tx.documento.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ tipo: TipoDocumento.oficio, enviadoPorId: 'coord' }),
+    });
+  });
+
+  it.each([TipoDocumento.oficio_alteracao, TipoDocumento.kit_estagio, TipoDocumento.anexo])(
+    'aceita %s da coordenação',
+    async (tipo) => {
+      const { tx, service } = montar();
+
+      await service.enviar('p1', PDF, { tipo }, COORDENACAO);
+
+      expect(tx.documento.create).toHaveBeenCalled();
+    },
+  );
+
+  it('recusa termo de compromisso enviado pela coordenação, sem tocar no storage', async () => {
+    const { storage, processos, service } = montar();
+
+    await expect(
+      service.enviar('p1', PDF, { tipo: TipoDocumento.termo_compromisso }, COORDENACAO),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(processos.obterParaRetorno).not.toHaveBeenCalled();
+    expect(storage.enviar).not.toHaveBeenCalled();
+  });
+
+  it('não sobe arquivo quando o processo não aceita retorno', async () => {
+    const { storage, processos, service } = montar();
+    processos.obterParaRetorno.mockRejectedValue(new ConflictException());
+
+    await expect(
+      service.enviar('p1', PDF, { tipo: TipoDocumento.oficio }, COORDENACAO),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(storage.enviar).not.toHaveBeenCalled();
+  });
+
+  it('a coordenação remove o retorno que ela mesma enviou', async () => {
+    const { tx, processos, service } = montar();
+    tx.documento.findFirst.mockResolvedValue({ ...DOCUMENTO, enviadoPorId: 'coord' });
+
+    await service.remover('p1', 'd1', COORDENACAO);
+
+    expect(processos.obterParaRetorno).toHaveBeenCalledWith(tx, 'p1', COORDENACAO);
+    expect(tx.documento.delete).toHaveBeenCalledWith({ where: { id: 'd1' } });
+  });
+
+  it('a coordenação não remove documento do representante', async () => {
+    const { tx, storage, service } = montar();
+
+    await expect(service.remover('p1', 'd1', COORDENACAO)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(tx.documento.delete).not.toHaveBeenCalled();
+    expect(storage.remover).not.toHaveBeenCalled();
+  });
+
+  it('o representante não remove o retorno da coordenação', async () => {
+    const { tx, service } = montar();
+    tx.documento.findFirst.mockResolvedValue({ ...DOCUMENTO, enviadoPorId: 'coord' });
+
+    await expect(service.remover('p1', 'd1', USUARIO)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(tx.documento.delete).not.toHaveBeenCalled();
   });
 });

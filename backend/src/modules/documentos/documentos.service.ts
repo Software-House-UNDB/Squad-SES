@@ -1,6 +1,13 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Documento, Prisma } from '../../generated/prisma/client.js';
+import { Perfil, TipoDocumento } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { StorageService } from '../../storage/storage.service.js';
 import type { UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
@@ -16,6 +23,15 @@ import {
 import { EnviarDocumentoDto } from './dto/documento.dto.js';
 
 const VALIDADE_URL_SEGUNDOS = 5 * 60;
+
+// O que a SES produz e devolve à UNDB. O TCE e os documentos do pacote
+// continuam só com o representante.
+const TIPOS_RETORNO: TipoDocumento[] = [
+  TipoDocumento.oficio,
+  TipoDocumento.oficio_alteracao,
+  TipoDocumento.kit_estagio,
+  TipoDocumento.anexo,
+];
 
 // A chave do objeto não sai na API: o acesso é só pela URL assinada.
 function semChave({ storageKey: _chave, ...documento }: Documento) {
@@ -50,7 +66,7 @@ export class DocumentosService {
   ) {
     garantirPdf(arquivo.buffer);
     // Confere antes de subir o arquivo para não deixar objeto órfão à toa.
-    await this.validarDestino(this.prisma, processoId, dto.estagiarioId, usuario);
+    await this.validarDestino(this.prisma, processoId, dto, usuario);
     const hashSha256 = calcularSha256(arquivo.buffer);
     await this.garantirInedito(this.prisma, processoId, hashSha256);
 
@@ -59,7 +75,7 @@ export class DocumentosService {
 
     try {
       const documento = await this.prisma.$transaction(async (tx) => {
-        await this.validarDestino(tx, processoId, dto.estagiarioId, usuario);
+        await this.validarDestino(tx, processoId, dto, usuario);
         await this.garantirInedito(tx, processoId, hashSha256);
         const documento = await tx.documento.create({
           data: {
@@ -105,8 +121,13 @@ export class DocumentosService {
 
   async remover(processoId: string, id: string, usuario: UsuarioAutenticado) {
     const documento = await this.prisma.$transaction(async (tx) => {
-      await this.processos.obterEditavel(tx, processoId, usuario);
+      await this.obterProcessoGravavel(tx, processoId, usuario);
       const documento = await this.obter(tx, processoId, id);
+      // Cada lado só desfaz o próprio envio: a coordenação não apaga o pacote
+      // do representante, e o representante não apaga o retorno da SES.
+      if (documento.enviadoPorId !== usuario.id) {
+        throw new ForbiddenException('Apenas quem enviou pode remover o documento');
+      }
       await tx.documento.delete({ where: { id } });
       await this.auditoria.registrar(tx, usuario, {
         acao: 'DELETE',
@@ -121,13 +142,28 @@ export class DocumentosService {
     await this.removerObjeto(documento.storageKey);
   }
 
+  // Representante: o próprio processo, em rascunho ou pendência.
+  // Coordenação: documentos de retorno, depois da aprovação (issue #24).
+  private obterProcessoGravavel(
+    cliente: Prisma.TransactionClient,
+    processoId: string,
+    usuario: UsuarioAutenticado,
+  ) {
+    return usuario.perfil === Perfil.COORDENACAO_SES
+      ? this.processos.obterParaRetorno(cliente, processoId, usuario)
+      : this.processos.obterEditavel(cliente, processoId, usuario);
+  }
+
   private async validarDestino(
     cliente: Prisma.TransactionClient,
     processoId: string,
-    estagiarioId: string | undefined,
+    { tipo, estagiarioId }: EnviarDocumentoDto,
     usuario: UsuarioAutenticado,
   ) {
-    await this.processos.obterEditavel(cliente, processoId, usuario);
+    if (usuario.perfil === Perfil.COORDENACAO_SES && !TIPOS_RETORNO.includes(tipo)) {
+      throw new ForbiddenException(`A coordenação não envia documentos do tipo ${tipo}`);
+    }
+    await this.obterProcessoGravavel(cliente, processoId, usuario);
     if (!estagiarioId) return;
 
     const estagiario = await cliente.estagiario.findFirst({
