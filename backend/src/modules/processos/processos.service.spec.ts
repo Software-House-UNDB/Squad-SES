@@ -25,32 +25,32 @@ function montar(processo: { status: StatusProcesso; observacaoAnalise: string | 
 }
 
 describe('ProcessosService.analisar', () => {
-  it('grava a observação e registra a auditoria', async () => {
-    const { tx, auditoria, service } = montar({
-      status: StatusProcesso.em_analise,
-      observacaoAnalise: null,
-    });
+  it.each([StatusProcesso.enviado, StatusProcesso.em_analise, StatusProcesso.pendencia])(
+    'grava a observação em processo %s e registra a auditoria',
+    async (status) => {
+      const { tx, auditoria, service } = montar({ status, observacaoAnalise: null });
 
-    const processo = await service.analisar(
-      'p1',
-      { observacaoAnalise: 'Falta o CPF' },
-      COORDENACAO,
-    );
+      const processo = await service.analisar(
+        'p1',
+        { observacaoAnalise: 'Falta o CPF' },
+        COORDENACAO,
+      );
 
-    expect(processo.observacaoAnalise).toBe('Falta o CPF');
-    expect(processo.status).toBe(StatusProcesso.em_analise);
-    expect(tx.processo.update).toHaveBeenCalledWith({
-      where: { id: 'p1' },
-      data: { observacaoAnalise: 'Falta o CPF' },
-    });
-    expect(auditoria.registrar).toHaveBeenCalledWith(tx, COORDENACAO, {
-      acao: 'UPDATE',
-      entidade: 'processo',
-      entidadeId: 'p1',
-      dadosAntes: { observacaoAnalise: null },
-      dadosDepois: { observacaoAnalise: 'Falta o CPF' },
-    });
-  });
+      expect(processo.observacaoAnalise).toBe('Falta o CPF');
+      expect(processo.status).toBe(status);
+      expect(tx.processo.update).toHaveBeenCalledWith({
+        where: { id: 'p1' },
+        data: { observacaoAnalise: 'Falta o CPF' },
+      });
+      expect(auditoria.registrar).toHaveBeenCalledWith(tx, COORDENACAO, {
+        acao: 'UPDATE',
+        entidade: 'processo',
+        entidadeId: 'p1',
+        dadosAntes: { observacaoAnalise: null },
+        dadosDepois: { observacaoAnalise: 'Falta o CPF' },
+      });
+    },
+  );
 
   it('recusa quem não é da coordenação', async () => {
     const { service } = montar({ status: StatusProcesso.enviado, observacaoAnalise: null });
@@ -68,17 +68,19 @@ describe('ProcessosService.analisar', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it.each([StatusProcesso.rascunho, StatusProcesso.aprovado, StatusProcesso.concluido])(
-    'recusa processo em %s',
-    async (status) => {
-      const { tx, service } = montar({ status, observacaoAnalise: null });
+  it.each([
+    StatusProcesso.rascunho,
+    StatusProcesso.aprovado,
+    StatusProcesso.aguardando_assinaturas,
+    StatusProcesso.concluido,
+  ])('recusa processo em %s', async (status) => {
+    const { tx, service } = montar({ status, observacaoAnalise: null });
 
-      await expect(
-        service.analisar('p1', { observacaoAnalise: 'x' }, COORDENACAO),
-      ).rejects.toBeInstanceOf(ConflictException);
-      expect(tx.processo.update).not.toHaveBeenCalled();
-    },
-  );
+    await expect(
+      service.analisar('p1', { observacaoAnalise: 'x' }, COORDENACAO),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(tx.processo.update).not.toHaveBeenCalled();
+  });
 });
 
 describe('AnalisarProcessoDto', () => {

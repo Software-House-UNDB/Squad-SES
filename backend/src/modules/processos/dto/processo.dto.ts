@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   IsEnum,
@@ -22,6 +22,13 @@ export class AtualizarProcessoDto extends PartialType(CriarProcessoDto) {}
 
 // Texto vazio ou null limpa a observação.
 export class AnalisarProcessoDto {
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    maxLength: 2000,
+    description: 'Observação da coordenação. Texto vazio ou null limpa a observação.',
+    example: 'Falta o CPF do estagiário no TCE.',
+  })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() || null : value))
   @ValidateIf((dto: AnalisarProcessoDto) => dto.observacaoAnalise !== null)
   @IsString({ message: 'observacaoAnalise inválida' })
@@ -30,16 +37,19 @@ export class AnalisarProcessoDto {
 }
 
 export class ListarProcessosDto {
+  @ApiPropertyOptional({ enum: StatusProcesso, enumName: 'StatusProcesso' })
   @IsOptional()
   @IsEnum(StatusProcesso, { message: 'status inválido' })
   status?: StatusProcesso;
 
+  @ApiPropertyOptional({ type: Number, minimum: 1, default: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'pagina inválida' })
   @Min(1, { message: 'pagina inválida' })
   pagina: number = 1;
 
+  @ApiPropertyOptional({ type: Number, minimum: 1, maximum: 100, default: 20 })
   @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'limite inválido' })
