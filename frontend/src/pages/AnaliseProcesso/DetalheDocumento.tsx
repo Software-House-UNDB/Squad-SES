@@ -1,6 +1,9 @@
 import { useId, useState } from 'react';
 import { CircleCheck, ExternalLink, MessageSquareWarning } from 'lucide-react';
 import Badge, { type BadgeVariant } from '../../components/ui/Badge.tsx';
+import Modal from '../../components/ui/Modal.tsx';
+import PdfViewer from '../../components/ui/PdfViewer.tsx';
+import { obterUrlDocumento } from '../../services/documentoService.ts';
 import { formatarTamanho } from '../NovoProcesso/pacote.ts';
 import { DECISAO_LABEL, LIMITE_COMENTARIO, validarComentario, type DocumentoAnalise, type TipoComentario } from './analise.ts';
 
@@ -24,6 +27,7 @@ const formatarData = (iso: string) =>
   });
 
 interface Props {
+  processoId: string;
   documento: DocumentoAnalise;
   /** A coordenação pode decidir este documento agora (processo em análise). */
   podeDecidir: boolean;
@@ -36,6 +40,7 @@ interface Props {
 
 /** Dados do documento selecionado, decisão da coordenação e histórico de comentários (RF-12). */
 export default function DetalheDocumento({
+  processoId,
   documento: d,
   podeDecidir,
   aviso,
@@ -47,6 +52,22 @@ export default function DetalheDocumento({
   const [apontando, setApontando] = useState(false);
   const [texto, setTexto] = useState('');
   const [erro, setErro] = useState<string | null>(null);
+  const [urlPdf, setUrlPdf] = useState<string | null>(null);
+  const [abrindoPdf, setAbrindoPdf] = useState(false);
+  const [erroPdf, setErroPdf] = useState<string | null>(null);
+
+  async function abrirPdf() {
+    setAbrindoPdf(true);
+    setErroPdf(null);
+    try {
+      // A URL assinada expira em pouco tempo; por isso é pedida a cada abertura.
+      setUrlPdf((await obterUrlDocumento(processoId, d.id)).url);
+    } catch {
+      setErroPdf('Não foi possível obter o link do PDF. Tente de novo em instantes.');
+    } finally {
+      setAbrindoPdf(false);
+    }
+  }
 
   function registrar() {
     const problema = validarComentario(texto);
@@ -85,11 +106,21 @@ export default function DetalheDocumento({
       <button
         type="button"
         className="ap-btn ap-btn--ghost ap-btn--sm"
-        disabled
-        title="A visualização do PDF depende do armazenamento da API"
+        disabled={abrindoPdf}
+        onClick={() => void abrirPdf()}
       >
-        <ExternalLink size={15} aria-hidden="true" /> Abrir PDF
+        <ExternalLink size={15} aria-hidden="true" /> {abrindoPdf ? 'Abrindo…' : 'Abrir PDF'}
       </button>
+      {erroPdf && (
+        <p role="alert" className="ap-erro">
+          {erroPdf}
+        </p>
+      )}
+      {urlPdf && (
+        <Modal title={d.rotulo} subtitle={d.nomeArquivo} size="lg" onClose={() => setUrlPdf(null)}>
+          <PdfViewer url={urlPdf} titulo={d.rotulo} />
+        </Modal>
+      )}
 
       {!podeDecidir ? (
         aviso && <p className="ap-aviso">{aviso}</p>
