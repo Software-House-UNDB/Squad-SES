@@ -18,6 +18,7 @@ describe('shell da área autenticada', () => {
       .map((a) => a.textContent);
     expect(links).toEqual([
       'Início',
+      'Processos',
       'Análise de Ofícios',
       'Assinatura de Termos',
       'Usuários',
