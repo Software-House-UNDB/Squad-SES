@@ -22,6 +22,14 @@ function comDatas<T extends { dataInicio?: string; dataTermino?: string }>(dto: 
   };
 }
 
+// O responsável só é guardado para menor de idade (RF-13).
+function paraGravar(dto: CriarEstagiarioDto) {
+  return {
+    ...comDatas(dto),
+    responsavelNome: dto.menorIdade ? dto.responsavelNome : null,
+  };
+}
+
 // CPF fica fora do log: a auditoria guarda histórico por mais tempo que o
 // cadastro e não deve acumular dado pessoal além do necessário.
 function semCpf<T extends { cpf: string }>({ cpf: _cpf, ...dados }: T) {
@@ -54,7 +62,7 @@ export class EstagiariosService {
       this.prisma.$transaction(async (tx) => {
         await this.processos.obterEditavel(tx, processoId, usuario);
         const estagiario = await tx.estagiario.create({
-          data: { ...comDatas(dto), processoId },
+          data: { ...paraGravar(dto), processoId },
         });
         await this.auditoria.registrar(tx, usuario, {
           acao: 'CREATE',
@@ -85,9 +93,17 @@ export class EstagiariosService {
           throw new BadRequestException('data_inicio posterior a data_termino');
         }
 
+        // No PATCH o DTO deixa tudo opcional e o @ValidateIf do RF-13 não
+        // vê o registro gravado; a regra é conferida aqui contra o estado final.
+        const menorIdade = dados.menorIdade ?? antes.menorIdade;
+        const responsavel =
+          dados.responsavelNome !== undefined ? dados.responsavelNome : antes.responsavelNome;
+        if (menorIdade && !responsavel) {
+          throw new BadRequestException('nome do responsável é obrigatório para menor de idade');
+        }
         const depois = await tx.estagiario.update({
           where: { id },
-          data: dados,
+          data: menorIdade ? dados : { ...dados, responsavelNome: null },
         });
         await this.auditoria.registrar(tx, usuario, {
           acao: 'UPDATE',
@@ -137,7 +153,7 @@ export class EstagiariosService {
         if (invalidos.length > 0) throw loteInvalido(total, invalidos);
 
         await tx.estagiario.createMany({
-          data: validos.map(({ dto }) => ({ ...comDatas(dto), processoId })),
+          data: validos.map(({ dto }) => ({ ...paraGravar(dto), processoId })),
         });
         await this.auditoria.registrar(tx, usuario, {
           acao: 'IMPORT_LOTE',
