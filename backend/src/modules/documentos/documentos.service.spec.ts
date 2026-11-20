@@ -22,6 +22,13 @@ const DOCUMENTO = {
   mimeType: 'application/pdf',
   storageKey: 'processos/p1/chave.pdf',
   enviadoPorId: 'u1',
+  enviadoPor: { perfil: Perfil.REPRESENTANTE_UNDB },
+};
+// Retorno enviado pela coordenação (autor 'coord').
+const RETORNO = {
+  ...DOCUMENTO,
+  enviadoPorId: 'coord',
+  enviadoPor: { perfil: Perfil.COORDENACAO_SES },
 };
 
 function montar() {
@@ -256,12 +263,29 @@ describe('DocumentosService: retorno da coordenação (#24)', () => {
 
   it('a coordenação remove o retorno que ela mesma enviou', async () => {
     const { tx, processos, service } = montar();
-    tx.documento.findFirst.mockResolvedValue({ ...DOCUMENTO, enviadoPorId: 'coord' });
+    tx.documento.findFirst.mockResolvedValue(RETORNO);
 
     await service.remover('p1', 'd1', COORDENACAO);
 
     expect(processos.obterParaRetorno).toHaveBeenCalledWith(tx, 'p1', COORDENACAO);
     expect(tx.documento.delete).toHaveBeenCalledWith({ where: { id: 'd1' } });
+  });
+
+  it('outro usuário da coordenação remove o retorno enviado por um colega', async () => {
+    const { tx, auditoria, service } = montar();
+    const outraCoordenadora = { id: 'coord2', perfil: Perfil.COORDENACAO_SES };
+    tx.documento.findFirst.mockResolvedValue(RETORNO);
+
+    await service.remover('p1', 'd1', outraCoordenadora);
+
+    expect(tx.documento.delete).toHaveBeenCalledWith({ where: { id: 'd1' } });
+    // A auditoria guarda o documento, sem o autor carregado para a checagem.
+    const { enviadoPor: _autor, ...semAutor } = RETORNO;
+    expect(auditoria.registrar).toHaveBeenCalledWith(
+      tx,
+      outraCoordenadora,
+      expect.objectContaining({ acao: 'DELETE', dadosAntes: semAutor }),
+    );
   });
 
   it('a coordenação não remove documento do representante', async () => {
@@ -276,7 +300,7 @@ describe('DocumentosService: retorno da coordenação (#24)', () => {
 
   it('o representante não remove o retorno da coordenação', async () => {
     const { tx, service } = montar();
-    tx.documento.findFirst.mockResolvedValue({ ...DOCUMENTO, enviadoPorId: 'coord' });
+    tx.documento.findFirst.mockResolvedValue(RETORNO);
 
     await expect(service.remover('p1', 'd1', USUARIO)).rejects.toBeInstanceOf(ForbiddenException);
     expect(tx.documento.delete).not.toHaveBeenCalled();

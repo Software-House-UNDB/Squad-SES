@@ -122,11 +122,14 @@ export class DocumentosService {
   async remover(processoId: string, id: string, usuario: UsuarioAutenticado) {
     const documento = await this.prisma.$transaction(async (tx) => {
       await this.obterProcessoGravavel(tx, processoId, usuario);
-      const documento = await this.obter(tx, processoId, id);
+      const { enviadoPor, ...documento } = await this.obterComAutor(tx, processoId, id);
       // Cada lado só desfaz o próprio envio: a coordenação não apaga o pacote
-      // do representante, e o representante não apaga o retorno da SES.
-      if (documento.enviadoPorId !== usuario.id) {
-        throw new ForbiddenException('Apenas quem enviou pode remover o documento');
+      // do representante, e o representante não apaga o retorno da SES. A
+      // regra é por perfil, não por pessoa: qualquer usuário da coordenação
+      // corrige o retorno enviado por outro colega da SES. Do lado da UNDB
+      // dá no mesmo, porque só o criador do processo envia documentos nele.
+      if (enviadoPor.perfil !== usuario.perfil) {
+        throw new ForbiddenException('Cada lado só remove os documentos que enviou');
       }
       await tx.documento.delete({ where: { id } });
       await this.auditoria.registrar(tx, usuario, {
@@ -189,6 +192,19 @@ export class DocumentosService {
   private async obter(cliente: Prisma.TransactionClient, processoId: string, id: string) {
     const documento = await cliente.documento.findFirst({
       where: { id, processoId },
+    });
+    if (!documento) throw new NotFoundException('Documento não encontrado');
+    return documento;
+  }
+
+  private async obterComAutor(
+    cliente: Prisma.TransactionClient,
+    processoId: string,
+    id: string,
+  ) {
+    const documento = await cliente.documento.findFirst({
+      where: { id, processoId },
+      include: { enviadoPor: { select: { perfil: true } } },
     });
     if (!documento) throw new NotFoundException('Documento não encontrado');
     return documento;
