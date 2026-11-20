@@ -661,3 +661,21 @@
     position: static;
   }
 }
+
+.np-upload {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.np-upload__barra {
+  flex: 1;
+  height: 8px;
+}
+
+.np-upload__pct {
+  min-width: 3ch;
+  font-size: 0.8125rem;
+  text-align: right;
+}
