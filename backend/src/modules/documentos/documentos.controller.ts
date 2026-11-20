@@ -13,8 +13,8 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes, ApiHeader, ApiTags } from '@nestjs/swagger';
-import { AuthTemporarioGuard } from '../auth/auth-temporario.guard.js';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { UsuarioAtual, type UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import { TipoDocumento } from '../../generated/prisma/enums.js';
 import { type ArquivoRecebido, TAMANHO_MAXIMO_ARQUIVO } from './arquivo.js';
@@ -22,8 +22,8 @@ import { DocumentosService } from './documentos.service.js';
 import { EnviarDocumentoDto } from './dto/documento.dto.js';
 
 @ApiTags('documentos')
-@ApiHeader({ name: 'x-usuario-id', description: 'Temporário, até o JWT' })
-@UseGuards(AuthTemporarioGuard)
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('processos/:processoId/documentos')
 export class DocumentosController {
   constructor(private readonly documentos: DocumentosService) {}

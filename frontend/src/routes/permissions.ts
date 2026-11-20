@@ -10,6 +10,8 @@ export const ACCESS = {
   // RF-20: painel da coordenação com a lista de processos recebidos da UNDB.
   listaProcessos: ['COORDENACAO_SES'],
   analiseOficios: ['COORDENACAO_SES'],
+  // Abertura do processo e análise documento a documento (RF-07, RF-08, RF-12).
+  analiseProcesso: ['COORDENACAO_SES'],
   assinaturaTermos: ['COORDENACAO_SES'],
   administracao: ['COORDENACAO_SES'],
 } satisfies Record<string, Perfil[]>;
