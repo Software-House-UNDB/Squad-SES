@@ -14,6 +14,7 @@ function montar(processo: { status: StatusProcesso; observacaoAnalise: string | 
   const tx = {
     processo: {
       findUnique: vi.fn().mockResolvedValue(processo && { id: 'p1', ...processo }),
+      findFirst: vi.fn().mockResolvedValue(processo && { id: 'p1', ...processo }),
       update: vi.fn(({ data }) => Promise.resolve({ id: 'p1', ...processo, ...data })),
     },
   };
@@ -80,6 +81,50 @@ describe('ProcessosService.analisar', () => {
       service.analisar('p1', { observacaoAnalise: 'x' }, COORDENACAO),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(tx.processo.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('ProcessosService.obterParaRetorno', () => {
+  it.each([StatusProcesso.aprovado, StatusProcesso.aguardando_assinaturas])(
+    'libera retorno da coordenação em processo %s',
+    async (status) => {
+      const { tx, service } = montar({ status, observacaoAnalise: null });
+
+      const processo = await service.obterParaRetorno(tx as never, 'p1', COORDENACAO);
+
+      expect(processo.status).toBe(status);
+    },
+  );
+
+  it('recusa quem não é da coordenação', async () => {
+    const { tx, service } = montar({ status: StatusProcesso.aprovado, observacaoAnalise: null });
+
+    await expect(service.obterParaRetorno(tx as never, 'p1', REPRESENTANTE)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(tx.processo.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('responde 404 para processo inexistente', async () => {
+    const { tx, service } = montar(null);
+
+    await expect(service.obterParaRetorno(tx as never, 'p1', COORDENACAO)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it.each([
+    StatusProcesso.rascunho,
+    StatusProcesso.enviado,
+    StatusProcesso.em_analise,
+    StatusProcesso.pendencia,
+    StatusProcesso.concluido,
+  ])('recusa retorno em processo %s', async (status) => {
+    const { tx, service } = montar({ status, observacaoAnalise: null });
+
+    await expect(service.obterParaRetorno(tx as never, 'p1', COORDENACAO)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
   });
 });
 
