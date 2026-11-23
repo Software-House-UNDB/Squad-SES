@@ -50,7 +50,7 @@ describe('fluxo de login (API real)', () => {
 
     await preencherEEnviar();
 
-    expect(await screen.findByRole('heading', { name: 'Análise de Ofícios' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Processos' })).toBeInTheDocument();
     expect(getAccessToken()).toBe('novo-access');
     expect(getRefreshToken()).toBe('novo-refresh');
   });
@@ -125,7 +125,7 @@ describe('fluxo de login (demonstração, VITE_AUTH_MOCK=true)', () => {
 
     await preencherEEnviar(DEMO_USER.email, DEMO_USER.senha);
 
-    expect(await screen.findByRole('heading', { name: 'Análise de Ofícios' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Processos' })).toBeInTheDocument();
     expect(servidor).not.toHaveBeenCalled();
   });
 
@@ -143,7 +143,11 @@ describe('fluxo de login (demonstração, VITE_AUTH_MOCK=true)', () => {
     await preencherEEnviar(DEMO_USER_IES.email, DEMO_USER_IES.senha);
 
     // o login de demonstração demora ~500ms; o início também lista "Novo processo" num atalho
-    const atalhos = await screen.findAllByRole('link', { name: 'Novo processo' }, { timeout: 4000 });
+    const atalhos = await screen.findAllByRole(
+      'link',
+      { name: 'Novo processo' },
+      { timeout: 4000 },
+    );
     expect(atalhos.length).toBeGreaterThan(0);
     expect(screen.queryByRole('link', { name: 'Análise de Ofícios' })).not.toBeInTheDocument();
     expect(servidor).not.toHaveBeenCalled();

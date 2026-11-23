@@ -7,6 +7,8 @@ import type { Perfil } from '../types/auth.ts';
 export const ACCESS = {
   // RF-06: quem cria o processo e monta o pacote é o representante da IES, não a coordenação.
   novoProcesso: ['REPRESENTANTE_UNDB'],
+  // RF-20: painel da coordenação com a lista de processos recebidos da UNDB.
+  listaProcessos: ['COORDENACAO_SES'],
   analiseOficios: ['COORDENACAO_SES'],
   // Abertura do processo e análise documento a documento (RF-07, RF-08, RF-12).
   analiseProcesso: ['COORDENACAO_SES'],
@@ -16,5 +18,5 @@ export const ACCESS = {
 
 // Primeira tela de cada perfil após o login.
 export function homeFor(perfil: Perfil): string {
-  return perfil === 'COORDENACAO_SES' ? '/gerenciamento/analise-oficios' : '/dashboard';
+  return perfil === 'COORDENACAO_SES' ? '/gerenciamento/processos' : '/dashboard';
 }

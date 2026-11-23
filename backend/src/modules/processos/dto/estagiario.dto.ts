@@ -2,6 +2,7 @@ import { PartialType } from '@nestjs/swagger';
 import { Transform, TransformFnParams, Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -11,6 +12,7 @@ import {
   Max,
   Min,
   Validate,
+  ValidateIf,
   ValidationArguments,
   ValidatorConstraint,
   ValidatorConstraintInterface,
@@ -26,6 +28,25 @@ const seTexto = (ajuste: (valor: string) => string) => {
 const aparar = seTexto((valor) => valor.trim());
 const apenasDigitos = seTexto((valor) => valor.replace(/\D/g, ''));
 const maiusculas = seTexto((valor) => valor.trim().toUpperCase());
+
+// No CSV o valor chega como texto; o que não for reconhecido cai no IsBoolean.
+// VERDADEIRO/FALSO é como o Excel pt-BR exporta células lógicas.
+const SIM_OU_NAO: Record<string, boolean> = {
+  sim: true,
+  s: true,
+  true: true,
+  verdadeiro: true,
+  '1': true,
+  nao: false,
+  n: false,
+  false: false,
+  falso: false,
+  '0': false,
+};
+// Remove acentos (inclusive os decompostos, NFD, de exports do Mac): "não" vira "nao".
+const semAcento = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const simOuNao = ({ value }: TransformFnParams) =>
+  typeof value === 'string' ? (SIM_OU_NAO[semAcento(value.trim().toLowerCase())] ?? value) : value;
 
 export function cpfValido(valor: unknown): boolean {
   if (typeof valor !== 'string' || !/^\d{11}$/.test(valor)) return false;
@@ -99,20 +120,35 @@ export class CriarEstagiarioDto {
   @IsNotEmpty({ message: 'curso é obrigatório' })
   curso: string;
 
-  @Transform(aparar)
-  @IsString({ message: 'cidade é obrigatória' })
-  @IsNotEmpty({ message: 'cidade é obrigatória' })
-  cidade: string;
+  @IsOptional()
+  @Transform(simOuNao)
+  @IsBoolean({ message: 'menor de idade inválido' })
+  menorIdade?: boolean;
 
+  // RF-13: o estagiário menor de idade precisa de um responsável.
+  @ValidateIf((dto: CriarEstagiarioDto) => dto.menorIdade === true || dto.responsavelNome != null)
+  @Transform(aparar)
+  @IsString({ message: 'nome do responsável é obrigatório para menor de idade' })
+  @IsNotEmpty({ message: 'nome do responsável é obrigatório para menor de idade' })
+  responsavelNome?: string;
+
+  @IsOptional()
+  @Transform(aparar)
+  @IsString({ message: 'cidade inválida' })
+  @IsNotEmpty({ message: 'cidade inválida' })
+  cidade?: string;
+
+  @IsOptional()
   @Transform(maiusculas)
   @IsString({ message: 'UF inválida' })
   @Matches(/^[A-Z]{2}$/, { message: 'UF inválida' })
-  uf: string;
+  uf?: string;
 
+  @IsOptional()
   @Transform(apenasDigitos)
   @IsString({ message: 'CEP inválido' })
   @Matches(/^\d{8}$/, { message: 'CEP inválido' })
-  cep: string;
+  cep?: string;
 
   @IsOptional()
   @Transform(aparar)

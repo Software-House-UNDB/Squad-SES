@@ -19,6 +19,13 @@ import {
 // pendencia: o ofício foi reprovado e volta para correção antes do reenvio.
 const STATUS_EDITAVEIS: StatusProcesso[] = [StatusProcesso.rascunho, StatusProcesso.pendencia];
 
+// Depois da aprovação, a coordenação devolve documentos ao processo (ofício
+// carimbado, kit de estágio) sem mudar o status. concluido fica fechado.
+const STATUS_RETORNO: StatusProcesso[] = [
+  StatusProcesso.aprovado,
+  StatusProcesso.aguardando_assinaturas,
+];
+
 // A coordenação só comenta o que já foi enviado e ainda não foi aprovado.
 // A troca de status fica com a máquina de estados.
 const STATUS_ANALISAVEIS: StatusProcesso[] = [
@@ -162,6 +169,22 @@ export class ProcessosService {
     }
     if (!STATUS_EDITAVEIS.includes(processo.status)) {
       throw new ConflictException(`Processo em ${processo.status} não pode ser alterado`);
+    }
+    return processo;
+  }
+
+  async obterParaRetorno(tx: Prisma.TransactionClient, id: string, usuario: UsuarioAutenticado) {
+    if (usuario.perfil !== Perfil.COORDENACAO_SES) {
+      throw new ForbiddenException('Apenas a coordenação SES envia documentos de retorno');
+    }
+    const processo = await tx.processo.findFirst({
+      where: { id, ...this.escopo(usuario) },
+    });
+    if (!processo) throw new NotFoundException('Processo não encontrado');
+    if (!STATUS_RETORNO.includes(processo.status)) {
+      throw new ConflictException(
+        `Processo em ${processo.status} não recebe documentos de retorno`,
+      );
     }
     return processo;
   }

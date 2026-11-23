@@ -1,5 +1,6 @@
 import type { ChangeEvent } from 'react';
 import { CircleCheck, Paperclip, X } from 'lucide-react';
+import type { EstadoUpload } from './useUploads.ts';
 import IconButton from '../../components/ui/IconButton.tsx';
 import { ACCEPT, formatarTamanho } from './pacote.ts';
 
@@ -14,6 +15,10 @@ interface ArquivoSlotProps {
   rotulo: string;
   arquivo?: Arquivo;
   erro?: string;
+  /** Andamento do envio ao servidor; sem ele o slot só mostra o anexo escolhido. */
+  envio?: EstadoUpload;
+  onCancelarEnvio?: () => void;
+  onTentarDeNovo?: () => void;
   onEscolher: (arquivo: File) => void;
   onRemover: () => void;
 }
@@ -23,6 +28,9 @@ export default function ArquivoSlot({
   rotulo,
   arquivo,
   erro,
+  envio,
+  onCancelarEnvio,
+  onTentarDeNovo,
   onEscolher,
   onRemover,
 }: ArquivoSlotProps) {
@@ -64,6 +72,32 @@ export default function ArquivoSlot({
           </label>
         )}
       </div>
+      {envio?.fase === 'enviando' && (
+        <div className="np-upload">
+          <progress
+            className="np-upload__barra"
+            max={100}
+            value={envio.progresso}
+            aria-label={`Enviando ${rotulo}`}
+          />
+          <span className="np-upload__pct">{envio.progresso}%</span>
+          {onCancelarEnvio && (
+            <button type="button" className="np-btn np-btn--secondary np-btn--sm" onClick={onCancelarEnvio}>
+              Cancelar envio
+            </button>
+          )}
+        </div>
+      )}
+      {envio?.fase === 'erro' && (
+        <div className="np-error np-slot__erro" role="alert">
+          {envio.mensagem}{' '}
+          {onTentarDeNovo && (
+            <button type="button" className="np-btn np-btn--secondary np-btn--sm" onClick={onTentarDeNovo}>
+              Tentar de novo
+            </button>
+          )}
+        </div>
+      )}
       {erro && (
         <p className="np-error np-slot__erro" role="alert">
           {erro}
