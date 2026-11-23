@@ -2,6 +2,9 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import './ui.css';
 
+/** Tempo, depois de abrir, em que o fundo ignora cliques (ver o onMouseDown abaixo). */
+const JANELA_DUPLO_CLIQUE_MS = 400;
+
 interface ModalProps {
   title: string;
   subtitle?: string;
@@ -24,8 +27,10 @@ export default function Modal({
   children,
 }: ModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const abertoEm = useRef(0);
 
   useEffect(() => {
+    abertoEm.current = Date.now();
     closeButtonRef.current?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -37,7 +42,14 @@ export default function Modal({
   }, [onClose]);
 
   return (
-    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div
+      className="modal-backdrop"
+      onMouseDown={(e) => {
+        // Num duplo clique no botão que abriu o modal, o 2º clique cai no fundo recém-criado e o
+        // fecharia na hora. Cliques no fundo logo depois de abrir não são "clicar fora".
+        if (e.target === e.currentTarget && Date.now() - abertoEm.current > JANELA_DUPLO_CLIQUE_MS) onClose();
+      }}
+    >
       <div className={`modal modal--${size}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal__header">
           <div>
