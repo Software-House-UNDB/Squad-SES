@@ -1,16 +1,7 @@
 // Regras da análise documento a documento feita pela coordenação da SES (RF-07, RF-08, RF-12).
 // Funções puras: a tela só pergunta "posso?"; a máquina de estados de verdade fica no backend.
 
-import type { BadgeVariant } from '../../components/ui/Badge.tsx';
-
-export type StatusProcesso =
-  | 'rascunho'
-  | 'enviado'
-  | 'em_analise'
-  | 'pendencia'
-  | 'aprovado'
-  | 'aguardando_assinaturas'
-  | 'concluido';
+import type { StatusProcesso } from '../../domain/processo.ts';
 
 export type DecisaoDoc = 'pendente' | 'aprovado' | 'pendencia';
 
@@ -48,27 +39,6 @@ export interface ProcessoAnalise {
   estagiarios: number;
   documentos: DocumentoAnalise[];
 }
-
-export const STATUS_LABEL: Record<StatusProcesso, string> = {
-  rascunho: 'Rascunho',
-  enviado: 'Enviado',
-  em_analise: 'Em análise',
-  pendencia: 'Pendência',
-  aprovado: 'Aprovado',
-  aguardando_assinaturas: 'Aguardando assinaturas',
-  concluido: 'Concluído',
-};
-
-/** Cor do selo de cada status do processo. */
-export const STATUS_BADGE: Record<StatusProcesso, BadgeVariant> = {
-  rascunho: 'neutral',
-  enviado: 'pending',
-  em_analise: 'pending',
-  pendencia: 'rejected',
-  aprovado: 'approved',
-  aguardando_assinaturas: 'approved',
-  concluido: 'closed',
-};
 
 /** Data no formato brasileiro, no fuso de São Paulo. */
 export const formatarData = (iso: string) =>

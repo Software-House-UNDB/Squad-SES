@@ -19,11 +19,13 @@ import {
   documentosComPendencia,
   formatarData,
   podeReenviar,
-  STATUS_BADGE,
-  STATUS_LABEL,
   type ProcessoAnalise,
-  type StatusProcesso,
 } from '../AnaliseProcesso/analise.ts';
+import {
+  STATUS_PROCESSO_LABEL,
+  STATUS_PROCESSO_VARIANT,
+  type StatusProcesso,
+} from '../../domain/processo.ts';
 import { hashDoArquivo, MSG_ARQUIVO_REPETIDO, validarArquivo } from '../NovoProcesso/pacote.ts';
 import '../AnaliseProcesso/analiseProcesso.css';
 import DocumentoCorrecao from './DocumentoCorrecao.tsx';
@@ -203,7 +205,7 @@ function CorrecaoDoProcesso({ id }: { id: string }) {
         <section className="ap-card ap-resumo" aria-label="Resumo do processo">
           <div className="ap-resumo__info">
             <div className="ap-resumo__linha">
-              <Badge variant={STATUS_BADGE[status]}>{STATUS_LABEL[status]}</Badge>
+              <Badge variant={STATUS_PROCESSO_VARIANT[status]}>{STATUS_PROCESSO_LABEL[status]}</Badge>
               <span className="ap-resumo__meta">
                 {processo.instituicao} · {processo.estagiarios} estagiário(s) · enviado em{' '}
                 {formatarData(processo.enviadoEm)}

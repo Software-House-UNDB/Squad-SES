@@ -5,10 +5,9 @@ import {
   podeAprovarProcesso,
   podeDevolverProcesso,
   progresso,
-  STATUS_BADGE,
-  STATUS_LABEL,
   type ProcessoAnalise,
 } from './analise.ts';
+import { STATUS_PROCESSO_LABEL, STATUS_PROCESSO_VARIANT } from '../../domain/processo.ts';
 
 interface Props {
   processo: ProcessoAnalise;
@@ -29,7 +28,7 @@ export default function ResumoAnalise({ processo, ocupado, erro, onIniciar, onAp
     <section className="ap-card ap-resumo" aria-label="Resumo da análise">
       <div className="ap-resumo__info">
         <div className="ap-resumo__linha">
-          <Badge variant={STATUS_BADGE[status]}>{STATUS_LABEL[status]}</Badge>
+          <Badge variant={STATUS_PROCESSO_VARIANT[status]}>{STATUS_PROCESSO_LABEL[status]}</Badge>
           <span className="ap-resumo__meta">
             {processo.instituicao} · {processo.estagiarios} estagiário(s) · enviado em{' '}
             {formatarData(processo.enviadoEm)}

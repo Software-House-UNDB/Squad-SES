@@ -17,8 +17,8 @@ import {
   podeDecidir,
   type DocumentoAnalise,
   type ProcessoAnalise,
-  type StatusProcesso,
 } from './analise.ts';
+import type { StatusProcesso } from '../../domain/processo.ts';
 import DetalheDocumento from './DetalheDocumento.tsx';
 import ListaDocumentos from './ListaDocumentos.tsx';
 import ResumoAnalise from './ResumoAnalise.tsx';

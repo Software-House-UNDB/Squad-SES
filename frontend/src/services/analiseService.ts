@@ -17,8 +17,8 @@ import {
   type DocumentoAnalise,
   type ProcessoAnalise,
   type ResumoProcesso,
-  type StatusProcesso,
 } from '../pages/AnaliseProcesso/analise.ts';
+import type { StatusProcesso } from '../domain/processo.ts';
 import { ArquivoRepetidoError } from './processoService.ts';
 
 export class ProcessoNaoEncontradoError extends Error {
