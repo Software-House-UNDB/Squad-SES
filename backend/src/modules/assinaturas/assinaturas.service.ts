@@ -8,11 +8,13 @@ import {
   Logger,
   NotFoundException,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { hash as argon2Hash, verify as argon2Verify } from '@node-rs/argon2';
 import type { Prisma } from '../../generated/prisma/client.js';
 import {
+  MetodoAssinatura,
   PapelSignatario,
   Perfil,
   StatusProcesso,
@@ -20,6 +22,8 @@ import {
 } from '../../generated/prisma/enums.js';
 import { EmailService } from '../../email/email.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { StorageService } from '../../storage/storage.service.js';
+import { calcularSha256 } from '../documentos/arquivo.js';
 import { AuditoriaService } from '../auditoria/auditoria.service.js';
 import type { UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import { emailCodigoOtp, emailLinkAssinatura } from './emails.js';
@@ -50,12 +54,20 @@ const INCLUIR_NO_LINK = {
       id: true,
       tipo: true,
       nomeArquivo: true,
+      mimeType: true,
+      storageKey: true,
+      hashSha256: true,
       processo: { select: { id: true, status: true } },
     },
   },
 } satisfies Prisma.SignatarioInclude;
 
 type SignatarioDoLink = Prisma.SignatarioGetPayload<{ include: typeof INCLUIR_NO_LINK }>;
+
+// O que a requisição de assinatura traz como evidência (RF-15).
+export type EvidenciaRequisicao = { ip?: string; userAgent?: string };
+
+const VALIDADE_URL_DOCUMENTO_SEGUNDOS = 5 * 60;
 
 const muitasTentativas = (corpo: object) => new HttpException(corpo, HttpStatus.TOO_MANY_REQUESTS);
 
@@ -68,6 +80,7 @@ export class AssinaturasService {
     private readonly auditoria: AuditoriaService,
     private readonly email: EmailService,
     private readonly config: ConfigService,
+    private readonly storage: StorageService,
   ) {}
 
   // Chamado na transição aprovado -> aguardando_assinaturas, dentro da mesma
@@ -316,6 +329,208 @@ export class AssinaturasService {
     }
   }
 
+  // URL temporária do PDF para quem tem o link e o código (RF-14: a tela só
+  // libera o botão de assinar depois de o PDF ser lido até o fim).
+  async urlDocumentoPorLink(token: string, codigo: string) {
+    const signatario = await this.carregarLink(token);
+    await this.conferirOtp(signatario, codigo);
+    const { documento } = signatario;
+    const url = await this.storage.urlAssinada(
+      documento.storageKey,
+      documento.nomeArquivo,
+      documento.mimeType,
+      VALIDADE_URL_DOCUMENTO_SEGUNDOS,
+    );
+    return { url, expiraEm: new Date(Date.now() + VALIDADE_URL_DOCUMENTO_SEGUNDOS * 1000) };
+  }
+
+  // Supervisor, diretor da ESP-MA e estagiário: link + OTP (método OTP).
+  async assinarPorLink(token: string, codigo: string, evidencia: EvidenciaRequisicao) {
+    const signatario = await this.carregarLink(token);
+    await this.conferirOtp(signatario, codigo);
+    return this.registrarAssinatura(signatario, MetodoAssinatura.OTP, evidencia);
+  }
+
+  // Representante da UNDB: assina logado e confirma a senha no ato (método SENHA).
+  async assinarLogado(id: string, senha: string, usuario: UsuarioAutenticado, userAgent?: string) {
+    const signatario = await this.prisma.signatario.findFirst({
+      where: { id, usuarioId: usuario.id, papel: PapelSignatario.REPRESENTANTE_UNDB },
+      include: { ...INCLUIR_NO_LINK, usuario: { select: { senhaHash: true } } },
+    });
+    if (!signatario) throw new NotFoundException('Signatário não encontrado');
+    if (signatario.assinatura) {
+      throw new ConflictException({
+        erro: 'ja_assinado',
+        motivo: 'Este documento já foi assinado',
+      });
+    }
+    this.garantirAguardando(signatario.documento.processo.status);
+    if (!signatario.usuario || !(await argon2Verify(signatario.usuario.senhaHash, senha))) {
+      throw new UnauthorizedException({ erro: 'senha_invalida', motivo: 'Senha incorreta' });
+    }
+    return this.registrarAssinatura(
+      signatario,
+      MetodoAssinatura.SENHA,
+      { ip: usuario.ip, userAgent },
+      usuario.id,
+    );
+  }
+
+  // Situação das assinaturas de um processo, por documento e por parte (US15).
+  // O representante usa o id do próprio signatário para assinar.
+  async listarPorProcesso(processoId: string, usuario: UsuarioAutenticado) {
+    const processo = await this.prisma.processo.findFirst({
+      where: { id: processoId, ...this.escopo(usuario) },
+      select: {
+        id: true,
+        status: true,
+        documentos: {
+          where: { signatarios: { some: {} } },
+          orderBy: { criadoEm: 'asc' },
+          select: {
+            id: true,
+            tipo: true,
+            nomeArquivo: true,
+            estagiarioId: true,
+            signatarios: {
+              orderBy: { papel: 'asc' },
+              select: {
+                id: true,
+                papel: true,
+                nome: true,
+                email: true,
+                usuarioId: true,
+                linkEnviadoEm: true,
+                tokenExpiraEm: true,
+                assinatura: {
+                  select: { assinadoEm: true, metodo: true, nivel: true, hashSha256: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!processo) throw new NotFoundException('Processo não encontrado');
+    return processo;
+  }
+
+  // Grava a assinatura e as evidências numa transação só, com a auditoria e,
+  // na última assinatura do processo, a transição para concluido.
+  private async registrarAssinatura(
+    signatario: SignatarioDoLink,
+    metodo: MetodoAssinatura,
+    evidencia: EvidenciaRequisicao,
+    usuarioId?: string,
+  ) {
+    const { documento } = signatario;
+    const processoId = documento.processo.id;
+
+    // Hash do PDF calculado agora, sobre o arquivo do storage (não o do upload).
+    // Se não bater com o registrado, o arquivo mudou depois do envio: ninguém
+    // assina um conteúdo diferente do que os outros assinaram.
+    const hashSha256 = calcularSha256(await this.storage.baixar(documento.storageKey));
+    if (hashSha256 !== documento.hashSha256) {
+      this.logger.error(
+        `Hash do documento ${documento.id} no storage difere do registrado no upload`,
+      );
+      throw new ConflictException({
+        erro: 'documento_alterado',
+        motivo: 'O arquivo do documento não confere com o enviado. Avise a coordenação',
+      });
+    }
+
+    const ip = evidencia.ip || 'desconhecido';
+    const userAgent = evidencia.userAgent || 'desconhecido';
+    const usuarioAuditoria = { id: usuarioId, ip };
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        // Trava o processo: duas últimas assinaturas simultâneas não podem
+        // deixar de ver uma à outra e pular a transição para concluido.
+        const [travado] = await tx.$queryRaw<{ status: StatusProcesso }[]>`
+          SELECT status FROM processos WHERE id = ${processoId}::uuid FOR UPDATE`;
+        this.garantirAguardando(travado?.status);
+
+        const assinatura = await tx.assinatura.create({
+          data: {
+            signatarioId: signatario.id,
+            documentoId: documento.id,
+            hashSha256,
+            metodo,
+            aceite: true,
+            ip,
+            userAgent,
+          },
+        });
+        // O código foi usado: não serve para outra assinatura.
+        await tx.signatario.update({
+          where: { id: signatario.id },
+          data: { otpHash: null, otpExpiraEm: null },
+        });
+        await this.auditoria.registrar(tx, usuarioAuditoria, {
+          acao: 'ASSINATURA',
+          entidade: 'assinatura',
+          entidadeId: assinatura.id,
+          dadosDepois: {
+            documentoId: documento.id,
+            signatarioId: signatario.id,
+            papel: signatario.papel,
+            metodo,
+            nivel: assinatura.nivel,
+            hashSha256,
+            userAgent,
+            assinadoEm: assinatura.assinadoEm,
+          },
+        });
+
+        const pendentes = await tx.signatario.count({
+          where: { documento: { processoId }, assinatura: { is: null } },
+        });
+        if (pendentes === 0) {
+          await tx.processo.update({
+            where: { id: processoId },
+            data: { status: StatusProcesso.concluido },
+          });
+          await this.auditoria.registrar(tx, usuarioAuditoria, {
+            acao: 'UPDATE',
+            entidade: 'processo',
+            entidadeId: processoId,
+            dadosAntes: { status: StatusProcesso.aguardando_assinaturas },
+            dadosDepois: { status: StatusProcesso.concluido, motivo: 'ultima_assinatura' },
+          });
+        }
+
+        return {
+          assinaturaId: assinatura.id,
+          assinadoEm: assinatura.assinadoEm,
+          metodo,
+          nivel: assinatura.nivel,
+          hashSha256,
+          processoConcluido: pendentes === 0,
+        };
+      });
+    } catch (erro) {
+      // Duas requisições do mesmo signatário: o índice único barrou a segunda.
+      if ((erro as { code?: string }).code === 'P2002') {
+        throw new ConflictException({
+          erro: 'ja_assinado',
+          motivo: 'Este documento já foi assinado',
+        });
+      }
+      throw erro;
+    }
+  }
+
+  private garantirAguardando(status: StatusProcesso | undefined) {
+    if (status !== StatusProcesso.aguardando_assinaturas) {
+      throw new ConflictException({
+        erro: 'assinatura_encerrada',
+        motivo: 'O processo não está mais aguardando assinaturas',
+      });
+    }
+  }
+
   // Valida o token do link. Público: a resposta não depende de login.
   async carregarLink(token: string): Promise<SignatarioDoLink> {
     const signatario = FORMATO_TOKEN.test(token)
@@ -339,12 +554,7 @@ export class AssinaturasService {
         motivo: 'O link expirou. Peça um novo ao responsável pelo processo',
       });
     }
-    if (signatario.documento.processo.status !== StatusProcesso.aguardando_assinaturas) {
-      throw new ConflictException({
-        erro: 'assinatura_encerrada',
-        motivo: 'O processo não está mais aguardando assinaturas',
-      });
-    }
+    this.garantirAguardando(signatario.documento.processo.status);
     return signatario;
   }
 
