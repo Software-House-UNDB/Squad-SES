@@ -37,6 +37,16 @@
   color: var(--status-closed-text);
 }
 
+.badge--info {
+  background: var(--status-info-bg);
+  color: var(--status-info-text);
+}
+
+.badge--warning {
+  background: var(--status-warning-bg);
+  color: var(--status-warning-text);
+}
+
 /* Chip */
 .chip {
   border: none;
@@ -48,7 +58,9 @@
   background: var(--status-closed-bg);
   color: var(--status-closed-text);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .chip:hover {
@@ -81,7 +93,9 @@
   color: var(--color-text-muted);
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .tabs__item:hover {
@@ -354,7 +368,9 @@
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .icon-button:hover {

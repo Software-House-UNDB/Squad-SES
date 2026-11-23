@@ -3,11 +3,11 @@ import { ACCESS, homeFor } from './permissions.ts';
 
 describe('permissions', () => {
   it('cada perfil começa na sua tela', () => {
-    expect(homeFor('COORDENACAO_SES')).toBe('/gerenciamento/analise-oficios');
+    expect(homeFor('COORDENACAO_SES')).toBe('/gerenciamento/processos');
     expect(homeFor('REPRESENTANTE_UNDB')).toBe('/dashboard');
   });
 
-  it('só a coordenação acessa análise, assinatura e administração', () => {
+  it('só a coordenação acessa processos, análise, assinatura e administração', () => {
     const { novoProcesso, ...restritas } = ACCESS;
     for (const perfis of Object.values(restritas)) {
       expect(perfis).toEqual(['COORDENACAO_SES']);

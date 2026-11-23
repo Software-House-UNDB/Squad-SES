@@ -1,0 +1,53 @@
+/* Estilos da Lista de processos da coordenação. */
+
+.processos-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  box-shadow: var(--app-shadow);
+}
+
+.processos-table-wrap {
+  overflow-x: auto;
+}
+
+.processos-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-app);
+  font-size: 13.5px;
+}
+
+.processos-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.processos-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.processos-table tbody tr:hover {
+  background: var(--color-bg);
+}
+
+.processos-table__numero {
+  font-weight: 600;
+}
+
+.processos-table__empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-family: var(--font-app);
+  font-size: 14px;
+}

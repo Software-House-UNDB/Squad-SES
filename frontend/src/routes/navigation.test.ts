@@ -8,6 +8,7 @@ describe('menu por perfil', () => {
   it('coordenação vê gerenciamento e administração', () => {
     expect(links('COORDENACAO_SES')).toEqual([
       '/dashboard',
+      '/gerenciamento/processos',
       '/gerenciamento/analise-oficios',
       '/gerenciamento/assinatura-termos',
       '/administracao/usuarios',

@@ -1,6 +1,6 @@
 @import 'tailwindcss';
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -39,6 +39,10 @@
   --status-rejected-text: #991b1b;
   --status-closed-bg: #f3f4f6;
   --status-closed-text: #3e4452;
+  --status-info-bg: #dbeafe;
+  --status-info-text: #1e40af;
+  --status-warning-bg: #ffedd5;
+  --status-warning-text: #9a3412;
 
   /* Cards de dados dentro do modal de revisão (Dados de Unidade / Estrutura / Grupos) */
   --panel-bg: #f9fafb;
