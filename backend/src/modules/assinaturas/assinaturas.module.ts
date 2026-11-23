@@ -4,11 +4,13 @@ import { StorageModule } from '../../storage/storage.module.js';
 import { AuditoriaModule } from '../auditoria/auditoria.module.js';
 import { AssinaturasController } from './assinaturas.controller.js';
 import { AssinaturasService } from './assinaturas.service.js';
+import { ValidacaoController } from './validacao.controller.js';
+import { ValidacaoService } from './validacao.service.js';
 
 @Module({
   imports: [AuditoriaModule, EmailModule, StorageModule],
-  controllers: [AssinaturasController],
-  providers: [AssinaturasService],
+  controllers: [AssinaturasController, ValidacaoController],
+  providers: [AssinaturasService, ValidacaoService],
   // A transição aprovado -> aguardando_assinaturas chama criarSignatarios() e enviarLinks().
   exports: [AssinaturasService],
 })

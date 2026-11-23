@@ -64,6 +64,7 @@ function signatarioDoLink(extra: object = {}) {
       tipo: 'termo_compromisso',
       nomeArquivo: 'tce.pdf',
       mimeType: 'application/pdf',
+      codigoValidacao: '7K3M9QX2HV4T',
       storageKey: 'processos/p1/tce.pdf',
       hashSha256: HASH_PDF,
       processo: { id: 'p1', status: StatusProcesso.aguardando_assinaturas },
@@ -88,6 +89,7 @@ function montar(config: Record<string, string | undefined> = CONFIG) {
       ),
     },
     $queryRaw: vi.fn().mockResolvedValue([{ status: StatusProcesso.aguardando_assinaturas }]),
+    documento: { update: vi.fn() },
   };
   Object.assign(tx.processo, { update: vi.fn() });
   const prisma = {
@@ -189,6 +191,34 @@ describe('AssinaturasService.criarSignatarios', () => {
 
     expect(tx.signatario.create).toHaveBeenCalledTimes(1);
     expect(tx.signatario.create.mock.calls[0][0].data.papel).toBe(PapelSignatario.ESTAGIARIO);
+  });
+
+  it('gera o código de validação do TCE que ainda não tem', async () => {
+    const { service, tx } = montar();
+
+    await service.criarSignatarios(tx as never, 'p1', REPRESENTANTE);
+
+    expect(tx.documento.update).toHaveBeenCalledTimes(1);
+    const { where, data } = tx.documento.update.mock.calls[0][0];
+    expect(where).toEqual({ id: 'd1' });
+    expect(data.codigoValidacao).toMatch(/^[0-9A-HJKMNP-TV-Z]{12}$/);
+  });
+
+  it('não troca o código de validação que o documento já tem', async () => {
+    const { service, tx } = montar();
+    tx.processo.findUnique.mockResolvedValue({
+      ...PROCESSO,
+      documentos: [
+        {
+          ...TCE('d1', { id: 'e1', nome: 'Ana', email: 'ana@exemplo.com' }),
+          codigoValidacao: '7K3M9QX2HV4T',
+        },
+      ],
+    });
+
+    await service.criarSignatarios(tx as never, 'p1', REPRESENTANTE);
+
+    expect(tx.documento.update).not.toHaveBeenCalled();
   });
 
   it('lista tudo o que falta antes de criar qualquer signatário', async () => {
@@ -583,7 +613,12 @@ describe('AssinaturasService.assinarPorLink', () => {
       dadosDepois: { papel: 'SUPERVISOR', metodo: 'OTP', nivel: 'SIMPLES', hashSha256: HASH_PDF },
     });
     expect(tx.processo.update).not.toHaveBeenCalled();
-    expect(resposta).toMatchObject({ metodo: 'OTP', nivel: 'SIMPLES', processoConcluido: false });
+    expect(resposta).toMatchObject({
+      metodo: 'OTP',
+      nivel: 'SIMPLES',
+      codigoValidacao: '7K3M-9QX2-HV4T',
+      processoConcluido: false,
+    });
   });
 
   it('trava o processo antes de contar quem falta', async () => {
@@ -803,6 +838,21 @@ describe('AssinaturasService.listarPorProcesso', () => {
       id: 'p1',
       criadoPorId: 'rep',
     });
+  });
+
+  it('devolve o código de validação formatado', async () => {
+    const { service, prisma } = montar();
+    prisma.processo.findFirst.mockResolvedValue({
+      id: 'p1',
+      documentos: [
+        { id: 'd1', codigoValidacao: '7K3M9QX2HV4T', signatarios: [] },
+        { id: 'd2', codigoValidacao: null, signatarios: [] },
+      ],
+    });
+
+    const resposta = await service.listarPorProcesso('p1', COORDENACAO);
+
+    expect(resposta.documentos.map((d) => d.codigoValidacao)).toEqual(['7K3M-9QX2-HV4T', null]);
   });
 
   it('não expõe hash de token nem de código', async () => {
