@@ -139,6 +139,7 @@ function criarBase(): Record<string, ProcessoAnalise> {
       id: 'devolvido',
       numero: '2026/011',
       status: 'pendencia',
+      criadoPorId: CRIADOR_DE_EXEMPLO,
       instituicao: 'UNDB',
       enviadoEm: '2026-11-03T11:00:00.000Z',
       estagiarios: 2,

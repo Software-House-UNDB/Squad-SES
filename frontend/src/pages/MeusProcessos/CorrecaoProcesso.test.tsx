@@ -8,6 +8,11 @@ import * as servico from '../../services/analiseService.ts';
 import { loginAs, renderWithProviders } from '../../test-utils.tsx';
 import CorrecaoProcesso from './CorrecaoProcesso.tsx';
 
+vi.mock('../../services/retornoService.ts', () => ({
+  listarDocumentos: vi.fn().mockResolvedValue([]),
+  removerDocumento: vi.fn(),
+}));
+
 vi.mock('../../services/analiseService.ts', async (original) => {
   const real = await original<typeof import('../../services/analiseService.ts')>();
   return {
@@ -278,5 +283,17 @@ describe('CorrecaoProcesso', () => {
       'href',
       '/gerenciamento/meus-processos',
     );
+  });
+
+  it('processo aprovado mostra os retornos da SES ao representante, sem envio nem exclusão', async () => {
+    abrir('aprovado');
+    expect(await screen.findByRole('heading', { name: 'Documentos de retorno da SES' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Enviar retorno' })).not.toBeInTheDocument();
+  });
+
+  it('processo devolvido (pendência) não mostra a área de retorno', async () => {
+    abrir('devolvido');
+    await screen.findByRole('heading', { name: /Processo 2026\/011/ });
+    expect(screen.queryByRole('heading', { name: 'Documentos de retorno da SES' })).not.toBeInTheDocument();
   });
 });
