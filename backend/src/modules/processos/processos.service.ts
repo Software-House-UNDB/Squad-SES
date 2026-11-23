@@ -117,7 +117,7 @@ export class ProcessosService {
         data: { observacaoAnalise: dto.observacaoAnalise },
       });
       await this.auditoria.registrar(tx, usuario, {
-        acao: 'UPDATE',
+        acao: 'ANALISE',
         entidade: 'processo',
         entidadeId: id,
         dadosAntes: { observacaoAnalise: antes.observacaoAnalise },

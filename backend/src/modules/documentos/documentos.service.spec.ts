@@ -245,6 +245,18 @@ describe('DocumentosService: retorno da coordenação (#24)', () => {
     });
   });
 
+  it('audita o retorno da coordenação como RETORNO_COORDENACAO', async () => {
+    const { auditoria, tx, service } = montar();
+
+    await service.enviar('p1', PDF, { tipo: TipoDocumento.oficio }, COORDENACAO);
+
+    expect(auditoria.registrar).toHaveBeenCalledWith(
+      tx,
+      COORDENACAO,
+      expect.objectContaining({ acao: 'RETORNO_COORDENACAO', entidade: 'documento' }),
+    );
+  });
+
   it.each([TipoDocumento.oficio_alteracao, TipoDocumento.kit_estagio, TipoDocumento.anexo])(
     'aceita %s da coordenação',
     async (tipo) => {
