@@ -9,7 +9,7 @@ import './Dashboard.css';
 const BOAS_VINDAS: Record<Perfil, string> = {
   COORDENACAO_SES: 'Acompanhe os ofícios enviados pelas instituições e os termos aguardando assinatura.',
   REPRESENTANTE_UNDB:
-    'O envio de ofícios e pacotes de documentos da sua instituição estará disponível aqui em breve.',
+    'Envie o pacote de documentos dos estagiários e acompanhe os processos da sua instituição, inclusive os devolvidos pela SES para correção.',
 };
 
 /** Tela inicial após o login. Os atalhos seguem o menu do perfil. */

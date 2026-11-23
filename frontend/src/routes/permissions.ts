@@ -9,6 +9,8 @@ export const ACCESS = {
   novoProcesso: ['REPRESENTANTE_UNDB'],
   // RF-20: painel da coordenação com a lista de processos recebidos da UNDB.
   listaProcessos: ['COORDENACAO_SES'],
+  // Lista dos processos da UNDB e correção das pendências apontadas pela SES (RF-07, RF-12).
+  meusProcessos: ['REPRESENTANTE_UNDB'],
   analiseOficios: ['COORDENACAO_SES'],
   // Abertura do processo e análise documento a documento (RF-07, RF-08, RF-12).
   analiseProcesso: ['COORDENACAO_SES'],

@@ -1,26 +1,14 @@
 import { CircleCheck, Play, Undo2 } from 'lucide-react';
-import Badge, { type BadgeVariant } from '../../components/ui/Badge.tsx';
+import Badge from '../../components/ui/Badge.tsx';
 import {
+  formatarData,
   podeAprovarProcesso,
   podeDevolverProcesso,
   progresso,
+  STATUS_BADGE,
   STATUS_LABEL,
   type ProcessoAnalise,
-  type StatusProcesso,
 } from './analise.ts';
-
-const BADGE: Record<StatusProcesso, BadgeVariant> = {
-  rascunho: 'neutral',
-  enviado: 'pending',
-  em_analise: 'pending',
-  pendencia: 'rejected',
-  aprovado: 'approved',
-  aguardando_assinaturas: 'approved',
-  concluido: 'closed',
-};
-
-const formatarData = (iso: string) =>
-  new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
 interface Props {
   processo: ProcessoAnalise;
@@ -41,7 +29,7 @@ export default function ResumoAnalise({ processo, ocupado, erro, onIniciar, onAp
     <section className="ap-card ap-resumo" aria-label="Resumo da análise">
       <div className="ap-resumo__info">
         <div className="ap-resumo__linha">
-          <Badge variant={BADGE[status]}>{STATUS_LABEL[status]}</Badge>
+          <Badge variant={STATUS_BADGE[status]}>{STATUS_LABEL[status]}</Badge>
           <span className="ap-resumo__meta">
             {processo.instituicao} · {processo.estagiarios} estagiário(s) · enviado em{' '}
             {formatarData(processo.enviadoEm)}
