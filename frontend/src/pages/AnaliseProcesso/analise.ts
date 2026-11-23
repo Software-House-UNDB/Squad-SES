@@ -40,9 +40,7 @@ export interface ProcessoAnalise {
   documentos: DocumentoAnalise[];
 }
 
-/** Data no formato brasileiro, no fuso de São Paulo. */
-export const formatarData = (iso: string) =>
-  new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+export { formatarData } from '../../lib/data.ts';
 
 export const DECISAO_LABEL: Record<DecisaoDoc, string> = {
   pendente: 'Não analisado',
