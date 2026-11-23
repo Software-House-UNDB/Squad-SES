@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
 import './pdfViewer.css';
 
 export const ZOOM_MIN = 0.5;
 export const ZOOM_MAX = 3;
 export const ZOOM_PASSO = 0.25;
+/**
+ * Escala do zoom 100%. O viewport do pdf.js é em pontos (72 dpi), pequeno demais na tela; 1.4 deixa o texto
+ * legível e dá nitidez em telas de densidade maior (HiDPI) sem pesar o canvas.
+ */
+const ESCALA_BASE = 1.4;
 
 interface PdfViewerProps {
   /** URL do PDF (normalmente uma URL assinada do storage). */
@@ -33,6 +39,7 @@ export default function PdfViewer({ url, titulo, onChegouAoFim }: PdfViewerProps
   const chegouAoFim = useRef(false);
   const onChegouAoFimRef = useRef(onChegouAoFim);
   const [estado, setEstado] = useState<Estado>({ fase: 'carregando' });
+  const [documento, setDocumento] = useState<PDFDocumentProxy | null>(null);
   const [zoom, setZoom] = useState(1);
   const [tentativa, setTentativa] = useState(0);
 
@@ -49,6 +56,7 @@ export default function PdfViewer({ url, titulo, onChegouAoFim }: PdfViewerProps
     }
   }, []);
 
+  // Baixa e abre o documento só quando a URL muda (ou no "Tentar de novo"); o zoom não repete esse trabalho.
   useEffect(() => {
     let cancelado = false;
     let destruir: (() => void) | undefined;
@@ -57,6 +65,7 @@ export default function PdfViewer({ url, titulo, onChegouAoFim }: PdfViewerProps
     async function abrir() {
       try {
         const pdfjs = await import('pdfjs-dist');
+        if (cancelado) return;
         pdfjs.GlobalWorkerOptions.workerSrc = new URL(
           'pdfjs-dist/build/pdf.worker.min.mjs',
           import.meta.url,
@@ -65,12 +74,31 @@ export default function PdfViewer({ url, titulo, onChegouAoFim }: PdfViewerProps
         const tarefa = pdfjs.getDocument({ url });
         destruir = () => void tarefa.destroy();
         const pdf = await tarefa.promise;
-        if (cancelado) return;
+        if (!cancelado) setDocumento(pdf);
+      } catch {
+        if (!cancelado) setEstado({ fase: 'erro', mensagem: MSG_ERRO });
+      }
+    }
 
+    void abrir();
+    return () => {
+      cancelado = true;
+      setDocumento(null);
+      destruir?.();
+    };
+  }, [url, tentativa]);
+
+  // Desenha as páginas do documento já aberto; refaz só o desenho quando o zoom muda.
+  useEffect(() => {
+    if (!documento) return;
+    let cancelado = false;
+
+    async function desenhar(pdf: PDFDocumentProxy) {
+      try {
         const container = paginasRef.current;
         if (!container) return;
         container.replaceChildren();
-        const escala = 1.4 * zoom;
+        const escala = ESCALA_BASE * zoom;
 
         for (let n = 1; n <= pdf.numPages; n++) {
           const pagina = await pdf.getPage(n);
@@ -95,12 +123,11 @@ export default function PdfViewer({ url, titulo, onChegouAoFim }: PdfViewerProps
       }
     }
 
-    void abrir();
+    void desenhar(documento);
     return () => {
       cancelado = true;
-      destruir?.();
     };
-  }, [url, zoom, titulo, tentativa, verificarFim]);
+  }, [documento, zoom, titulo, verificarFim]);
 
   const pronto = estado.fase === 'pronto';
 

@@ -66,4 +66,18 @@ describe('PdfViewer', () => {
     await screen.findByText('1 página');
     await waitFor(() => expect(aoFim).toHaveBeenCalledTimes(1));
   });
+
+  it('mudar o zoom redesenha sem baixar o PDF de novo nem repetir o aviso de fim', async () => {
+    getDocument.mockReturnValue(pdfFalso(1));
+    const aoFim = vi.fn();
+    render(<PdfViewer url="https://exemplo.test/a.pdf" titulo="Apólice" onChegouAoFim={aoFim} />);
+    await screen.findByText('1 página');
+    await waitFor(() => expect(aoFim).toHaveBeenCalledTimes(1));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Aumentar zoom' }));
+    expect(await screen.findByText('125%')).toBeInTheDocument();
+    await screen.findByText('1 página');
+    expect(getDocument).toHaveBeenCalledTimes(1);
+    expect(aoFim).toHaveBeenCalledTimes(1);
+  });
 });
