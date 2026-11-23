@@ -2,6 +2,7 @@ import axios from 'axios';
 import { api } from './api.ts';
 import { ArquivoRepetidoError } from './processoService.ts';
 import type { TipoDocumento } from '../pages/NovoProcesso/pacote.ts';
+import type { TipoRetorno } from '../domain/retorno.ts';
 
 /** A API recusou o arquivo (400/413/415): vazio, grande demais ou não é PDF. `motivo` vem da API. */
 export class ArquivoRecusadoError extends Error {
@@ -10,6 +11,25 @@ export class ArquivoRecusadoError extends Error {
     this.name = 'ArquivoRecusadoError';
   }
 }
+
+/** A API recusou por perfil (403): tipo não permitido para o perfil ou documento do outro lado. */
+export class SemPermissaoError extends Error {
+  constructor() {
+    super('sem permissão para esta operação');
+    this.name = 'SemPermissaoError';
+  }
+}
+
+/** A API recusou por status (409): o processo não está num status que aceita esta operação. */
+export class ProcessoForaDoStatusError extends Error {
+  constructor() {
+    super('processo fora do status permitido');
+    this.name = 'ProcessoForaDoStatusError';
+  }
+}
+
+/** Tipos que a API aceita no envio: os do pacote da UNDB e os de retorno da SES. */
+export type TipoEnvio = TipoDocumento | TipoRetorno;
 
 /** O envio foi interrompido pelo usuário. */
 export class UploadCanceladoError extends Error {
@@ -41,7 +61,7 @@ interface OpcoesUpload {
 /** Envia um arquivo ao processo (POST /processos/:id/documentos, multipart), com progresso e cancelamento. */
 export async function enviarDocumento(
   processoId: string,
-  dados: { arquivo: File; tipo: TipoDocumento; estagiarioId?: string },
+  dados: { arquivo: File; tipo: TipoEnvio; estagiarioId?: string },
   { onProgresso, signal }: OpcoesUpload = {},
 ): Promise<DocumentoEnviado> {
   const corpo = new FormData();
@@ -67,7 +87,15 @@ export async function enviarDocumento(
     if (axios.isCancel(e)) throw new UploadCanceladoError();
     if (axios.isAxiosError(e)) {
       const status = e.response?.status;
-      if (status === 409) throw new ArquivoRepetidoError();
+      if (status === 403) throw new SemPermissaoError();
+      if (status === 409) {
+        // O 409 serve a dois casos: arquivo repetido e processo fora do status.
+        const mensagem = (e.response?.data as { message?: unknown } | undefined)?.message;
+        if (typeof mensagem === 'string' && /^Processo em /i.test(mensagem)) {
+          throw new ProcessoForaDoStatusError();
+        }
+        throw new ArquivoRepetidoError();
+      }
       if (status === 400 || status === 413 || status === 415) {
         const motivo = (e.response?.data as { motivo?: unknown } | undefined)?.motivo;
         throw new ArquivoRecusadoError(typeof motivo === 'string' ? motivo : 'O servidor recusou este arquivo.');

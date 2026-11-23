@@ -17,6 +17,11 @@ vi.mock('../../services/analiseService.ts', async (original) => {
   };
 });
 
+vi.mock('../../services/retornoService.ts', () => ({
+  listarDocumentos: vi.fn().mockResolvedValue([]),
+  removerDocumento: vi.fn(),
+}));
+
 const abrir = (id: string) => {
   loginAs('COORDENACAO_SES');
   return renderWithProviders(
@@ -200,5 +205,17 @@ describe('AnaliseProcesso', () => {
     await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Devolver processo' }));
     expect(await screen.findByText(/Não foi possível concluir a análise/)).toBeInTheDocument();
     expect(screen.getAllByText('Em análise').length).toBeGreaterThan(0);
+  });
+
+  it('processo aguardando assinaturas mostra o envio de retorno da SES; enviado não mostra', async () => {
+    abrir('aprovado');
+    expect(await screen.findByRole('heading', { name: 'Documentos de retorno da SES' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enviar retorno' })).toBeInTheDocument();
+  });
+
+  it('processo enviado não mostra a área de retorno da SES', async () => {
+    abrir('demo');
+    await screen.findByRole('heading', { name: 'Processo 2026/014' });
+    expect(screen.queryByRole('heading', { name: 'Documentos de retorno da SES' })).not.toBeInTheDocument();
   });
 });

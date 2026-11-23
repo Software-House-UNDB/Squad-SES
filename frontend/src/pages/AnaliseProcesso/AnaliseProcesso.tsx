@@ -22,6 +22,7 @@ import type { StatusProcesso } from '../../domain/processo.ts';
 import DetalheDocumento from './DetalheDocumento.tsx';
 import ListaDocumentos from './ListaDocumentos.tsx';
 import ResumoAnalise from './ResumoAnalise.tsx';
+import RetornoSES from './RetornoSES.tsx';
 import './analiseProcesso.css';
 
 const MSG_ERRO_CARGA = 'Não foi possível carregar o processo. Confira a conexão e tente de novo.';
@@ -213,6 +214,8 @@ function AnaliseDoProcesso({ id }: { id: string }) {
             />
           )}
         </div>
+
+        <RetornoSES processoId={id} status={processo.status} criadoPorId={processo.criadoPorId} />
       </div>
 
       {confirmacao === 'aprovar' && (

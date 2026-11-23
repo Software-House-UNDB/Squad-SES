@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArquivoRepetidoError } from '../../services/processoService.ts';
-import { ArquivoRecusadoError, UploadCanceladoError } from '../../services/uploadService.ts';
+import {
+  ArquivoRecusadoError,
+  ProcessoForaDoStatusError,
+  SemPermissaoError,
+  UploadCanceladoError,
+} from '../../services/uploadService.ts';
 import { MSG_ARQUIVO_REPETIDO } from './pacote.ts';
 
 export type EstadoUpload =
@@ -10,11 +15,18 @@ export type EstadoUpload =
 
 export const MSG_FALHA_UPLOAD = 'Não foi possível enviar o arquivo. Confira a conexão e tente de novo.';
 
+export const MSG_SEM_PERMISSAO =
+  'Você não tem permissão para esta operação (tipo de documento ou documento do outro lado).';
+export const MSG_FORA_DO_STATUS =
+  'O status do processo mudou e ele não aceita mais esta operação. Recarregue a página.';
+
 type Envio = (opcoes: { onProgresso: (percentual: number) => void; signal: AbortSignal }) => Promise<unknown>;
 
 export function mensagemDeErro(e: unknown): string {
   if (e instanceof ArquivoRepetidoError) return MSG_ARQUIVO_REPETIDO;
   if (e instanceof ArquivoRecusadoError) return e.motivo;
+  if (e instanceof SemPermissaoError) return MSG_SEM_PERMISSAO;
+  if (e instanceof ProcessoForaDoStatusError) return MSG_FORA_DO_STATUS;
   return MSG_FALHA_UPLOAD;
 }
 
