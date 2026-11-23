@@ -8,6 +8,7 @@ const COLUNAS = {
   cpf: 'cpf',
   matricula: 'matricula',
   curso: 'curso',
+  email: 'email',
   menor_idade: 'menorIdade',
   responsavel_nome: 'responsavelNome',
   cidade: 'cidade',

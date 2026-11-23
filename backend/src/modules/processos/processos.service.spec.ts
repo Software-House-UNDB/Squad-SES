@@ -168,4 +168,26 @@ describe('CriarProcessoDto', () => {
 
     expect(erros).toHaveLength(1);
   });
+
+  it('normaliza nome e e-mail do supervisor', async () => {
+    const dto = plainToInstance(CriarProcessoDto, {
+      supervisorNome: '  Maria Souza ',
+      supervisorEmail: ' Maria@Saude.MA.gov.br ',
+    });
+
+    expect(await validate(dto)).toEqual([]);
+    expect(dto).toMatchObject({
+      supervisorNome: 'Maria Souza',
+      supervisorEmail: 'maria@saude.ma.gov.br',
+    });
+  });
+
+  it.each([{ supervisorEmail: 'maria@' }, { supervisorNome: '   ' }])(
+    'rejeita %j',
+    async (corpo) => {
+      const erros = await validate(plainToInstance(CriarProcessoDto, corpo));
+
+      expect(erros).toHaveLength(1);
+    },
+  );
 });
