@@ -3,6 +3,7 @@ import { Transform, TransformFnParams, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsEmail,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -28,6 +29,7 @@ const seTexto = (ajuste: (valor: string) => string) => {
 const aparar = seTexto((valor) => valor.trim());
 const apenasDigitos = seTexto((valor) => valor.replace(/\D/g, ''));
 const maiusculas = seTexto((valor) => valor.trim().toUpperCase());
+const emailNormalizado = seTexto((valor) => valor.trim().toLowerCase());
 
 // No CSV o valor chega como texto; o que não for reconhecido cai no IsBoolean.
 // VERDADEIRO/FALSO é como o Excel pt-BR exporta células lógicas.
@@ -119,6 +121,13 @@ export class CriarEstagiarioDto {
   @IsString({ message: 'curso é obrigatório' })
   @IsNotEmpty({ message: 'curso é obrigatório' })
   curso: string;
+
+  // O estagiário assina o TCE por link enviado a este e-mail (RF-04).
+  // Opcional no cadastro; obrigatório antes do envio para assinatura.
+  @IsOptional()
+  @Transform(emailNormalizado)
+  @IsEmail({}, { message: 'e-mail inválido' })
+  email?: string;
 
   @IsOptional()
   @Transform(simOuNao)

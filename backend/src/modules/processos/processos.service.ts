@@ -44,7 +44,12 @@ export class ProcessosService {
   criar(dto: CriarProcessoDto, usuario: UsuarioAutenticado) {
     return this.prisma.$transaction(async (tx) => {
       const processo = await tx.processo.create({
-        data: { tipoEstagio: dto.tipoEstagio, criadoPorId: usuario.id },
+        data: {
+          tipoEstagio: dto.tipoEstagio,
+          supervisorNome: dto.supervisorNome,
+          supervisorEmail: dto.supervisorEmail,
+          criadoPorId: usuario.id,
+        },
       });
       await this.auditoria.registrar(tx, usuario, {
         acao: 'CREATE',
@@ -88,7 +93,11 @@ export class ProcessosService {
       const antes = await this.obterEditavel(tx, id, usuario);
       const depois = await tx.processo.update({
         where: { id },
-        data: { tipoEstagio: dto.tipoEstagio },
+        data: {
+          tipoEstagio: dto.tipoEstagio,
+          supervisorNome: dto.supervisorNome,
+          supervisorEmail: dto.supervisorEmail,
+        },
       });
       await this.auditoria.registrar(tx, usuario, {
         acao: 'UPDATE',
