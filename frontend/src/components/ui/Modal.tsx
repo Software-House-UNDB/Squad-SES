@@ -28,6 +28,9 @@ export default function Modal({
 }: ModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const abertoEm = useRef(0);
+  // O clique só fecha se o botão desceu E subiu no fundo: arrastar de dentro do diálogo para fora
+  // (ex.: selecionando texto) dispara o click no fundo, mas não é "clicar fora".
+  const desceuNoFundo = useRef(false);
 
   useEffect(() => {
     abertoEm.current = Date.now();
@@ -47,7 +50,13 @@ export default function Modal({
       onMouseDown={(e) => {
         // Num duplo clique no botão que abriu o modal, o 2º clique cai no fundo recém-criado e o
         // fecharia na hora. Cliques no fundo logo depois de abrir não são "clicar fora".
-        if (e.target === e.currentTarget && Date.now() - abertoEm.current > JANELA_DUPLO_CLIQUE_MS) onClose();
+        desceuNoFundo.current =
+          e.target === e.currentTarget && Date.now() - abertoEm.current > JANELA_DUPLO_CLIQUE_MS;
+      }}
+      onClick={(e) => {
+        const fechar = desceuNoFundo.current && e.target === e.currentTarget;
+        desceuNoFundo.current = false;
+        if (fechar) onClose();
       }}
     >
       <div className={`modal modal--${size}`} role="dialog" aria-modal="true" aria-label={title}>
