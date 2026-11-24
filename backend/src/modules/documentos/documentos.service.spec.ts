@@ -34,6 +34,7 @@ const RETORNO = {
 function montar() {
   const tx = {
     estagiario: { findFirst: vi.fn().mockResolvedValue({ id: 'e1' }) },
+    signatario: { count: vi.fn().mockResolvedValue(0) },
     documento: {
       create: vi.fn(({ data }) => Promise.resolve({ id: 'd1', ...data })),
       // A busca por hash é a checagem de duplicata: por padrão não acha nada.
@@ -132,9 +133,14 @@ describe('DocumentosService.enviar', () => {
     const { tx, storage, service } = montar();
     tx.documento.findFirst.mockResolvedValue(DOCUMENTO);
 
-    await expect(
-      service.enviar('p1', PDF, { tipo: TipoDocumento.anexo }, USUARIO),
-    ).rejects.toBeInstanceOf(ConflictException);
+    const erro = await service
+      .enviar('p1', PDF, { tipo: TipoDocumento.anexo }, USUARIO)
+      .catch((e: unknown) => e);
+    expect(erro).toBeInstanceOf(ConflictException);
+    expect((erro as ConflictException).getResponse()).toMatchObject({
+      erro: 'arquivo_repetido',
+      message: 'Documento já enviado neste processo',
+    });
     expect(tx.documento.findFirst).toHaveBeenCalledWith({
       where: { processoId: 'p1', hashSha256: calcularSha256(PDF.buffer) },
       select: { id: true },
@@ -165,6 +171,7 @@ describe('DocumentosService.enviar', () => {
 
     await expect(envio).rejects.toBeInstanceOf(ConflictException);
     await expect(envio).rejects.toThrow('Documento já enviado neste processo');
+    await expect(envio).rejects.toMatchObject({ response: { erro: 'arquivo_repetido' } });
     const [chave] = storage.enviar.mock.calls[0];
     expect(storage.remover).toHaveBeenCalledWith(chave);
     expect(auditoria.registrar).not.toHaveBeenCalled();
@@ -223,11 +230,41 @@ describe('DocumentosService.remover', () => {
     expect(storage.remover).toHaveBeenCalledWith(DOCUMENTO.storageKey);
   });
 
+  it('exclusão concorrente do mesmo documento vira 404 (e não 500), sem auditar nem mexer no storage', async () => {
+    const { tx, storage, auditoria, service } = montar();
+    // Outra requisição apagou o registro entre a leitura e o delete: o Prisma lança P2025.
+    tx.documento.delete.mockRejectedValue(Object.assign(new Error('No record was found'), { code: 'P2025' }));
+
+    await expect(service.remover('p1', 'd1', USUARIO)).rejects.toBeInstanceOf(NotFoundException);
+    expect(auditoria.registrar).not.toHaveBeenCalled();
+    expect(storage.remover).not.toHaveBeenCalled();
+  });
+
+  it('outros erros do banco na exclusão continuam subindo', async () => {
+    const { tx, service } = montar();
+    const falha = Object.assign(new Error('conexão caiu'), { code: 'P1001' });
+    tx.documento.delete.mockRejectedValue(falha);
+
+    await expect(service.remover('p1', 'd1', USUARIO)).rejects.toBe(falha);
+  });
+
   it('mantém a exclusão mesmo se o storage falhar', async () => {
     const { storage, service } = montar();
     storage.remover.mockRejectedValue(new Error('B2 fora'));
 
     await expect(service.remover('p1', 'd1', USUARIO)).resolves.toBeUndefined();
+  });
+
+  it('recusa com 409 documento que já tem signatários, sem tentar o delete', async () => {
+    const { tx, storage, service } = montar();
+    tx.signatario.count.mockResolvedValue(4);
+
+    await expect(service.remover('p1', 'd1', USUARIO)).rejects.toMatchObject({
+      response: { erro: 'documento_em_assinatura' },
+    });
+    expect(tx.signatario.count).toHaveBeenCalledWith({ where: { documentoId: 'd1' } });
+    expect(tx.documento.delete).not.toHaveBeenCalled();
+    expect(storage.remover).not.toHaveBeenCalled();
   });
 });
 
@@ -243,6 +280,18 @@ describe('DocumentosService: retorno da coordenação (#24)', () => {
     expect(tx.documento.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ tipo: TipoDocumento.oficio, enviadoPorId: 'coord' }),
     });
+  });
+
+  it('audita o retorno da coordenação como RETORNO_COORDENACAO', async () => {
+    const { auditoria, tx, service } = montar();
+
+    await service.enviar('p1', PDF, { tipo: TipoDocumento.oficio }, COORDENACAO);
+
+    expect(auditoria.registrar).toHaveBeenCalledWith(
+      tx,
+      COORDENACAO,
+      expect.objectContaining({ acao: 'RETORNO_COORDENACAO', entidade: 'documento' }),
+    );
   });
 
   it.each([TipoDocumento.oficio_alteracao, TipoDocumento.kit_estagio, TipoDocumento.anexo])(

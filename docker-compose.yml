@@ -48,6 +48,16 @@ services:
       MC_HOST_local: http://minioadmin:minioadmin@minio:9000
     entrypoint: ["mc", "mb", "--ignore-existing", "local/ses-docs"]
 
+  # Servidor SMTP de teste: guarda os e-mails sem entregar a ninguém.
+  # Caixa de entrada em http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1.27
+    container_name: ses_mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Interface web
+
 volumes:
   postgres_data:
   minio_data:

@@ -17,11 +17,12 @@ import {
   podeDecidir,
   type DocumentoAnalise,
   type ProcessoAnalise,
-  type StatusProcesso,
 } from './analise.ts';
+import type { StatusProcesso } from '../../domain/processo.ts';
 import DetalheDocumento from './DetalheDocumento.tsx';
 import ListaDocumentos from './ListaDocumentos.tsx';
 import ResumoAnalise from './ResumoAnalise.tsx';
+import RetornoSES from './RetornoSES.tsx';
 import './analiseProcesso.css';
 
 const MSG_ERRO_CARGA = 'Não foi possível carregar o processo. Confira a conexão e tente de novo.';
@@ -59,6 +60,12 @@ interface ToastState {
 /** Abertura do processo pela coordenação da SES, com análise documento a documento (RF-07, RF-08, RF-12). */
 export default function AnaliseProcesso() {
   const { id = '' } = useParams();
+  // key: ao trocar de processo (ex.: pelo histórico do navegador) o estado local — seleção,
+  // confirmação aberta, erro, aviso — recomeça do zero em vez de vazar para o outro processo.
+  return <AnaliseDoProcesso key={id} id={id} />;
+}
+
+function AnaliseDoProcesso({ id }: { id: string }) {
   const queryClient = useQueryClient();
   const chave = ['analise-processo', id];
 
@@ -208,6 +215,8 @@ export default function AnaliseProcesso() {
             />
           )}
         </div>
+
+        <RetornoSES processoId={id} status={processo.status} criadoPorId={processo.criadoPorId} />
       </div>
 
       {confirmacao === 'aprovar' && (
