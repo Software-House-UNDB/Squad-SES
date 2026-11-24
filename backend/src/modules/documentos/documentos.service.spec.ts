@@ -223,6 +223,24 @@ describe('DocumentosService.remover', () => {
     expect(storage.remover).toHaveBeenCalledWith(DOCUMENTO.storageKey);
   });
 
+  it('exclusão concorrente do mesmo documento vira 404 (e não 500), sem auditar nem mexer no storage', async () => {
+    const { tx, storage, auditoria, service } = montar();
+    // Outra requisição apagou o registro entre a leitura e o delete: o Prisma lança P2025.
+    tx.documento.delete.mockRejectedValue(Object.assign(new Error('No record was found'), { code: 'P2025' }));
+
+    await expect(service.remover('p1', 'd1', USUARIO)).rejects.toBeInstanceOf(NotFoundException);
+    expect(auditoria.registrar).not.toHaveBeenCalled();
+    expect(storage.remover).not.toHaveBeenCalled();
+  });
+
+  it('outros erros do banco na exclusão continuam subindo', async () => {
+    const { tx, service } = montar();
+    const falha = Object.assign(new Error('conexão caiu'), { code: 'P1001' });
+    tx.documento.delete.mockRejectedValue(falha);
+
+    await expect(service.remover('p1', 'd1', USUARIO)).rejects.toBe(falha);
+  });
+
   it('mantém a exclusão mesmo se o storage falhar', async () => {
     const { storage, service } = montar();
     storage.remover.mockRejectedValue(new Error('B2 fora'));
