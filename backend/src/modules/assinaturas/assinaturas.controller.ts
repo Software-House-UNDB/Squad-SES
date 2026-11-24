@@ -82,6 +82,31 @@ export class AssinaturasController {
     return this.assinaturas.listarPorProcesso(processoId, usuario);
   }
 
+  // Rota provisória da transição aprovado -> aguardando_assinaturas (#68),
+  // até a máquina de estados (#55) assumir. Só a coordenação SES.
+  @Post('processos/:processoId/iniciar')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  iniciar(
+    @Param('processoId', ParseUUIDPipe) processoId: string,
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+  ) {
+    return this.assinaturas.iniciarAssinaturas(processoId, usuario);
+  }
+
+  // Manda de novo os links que falharam no envio.
+  @Post('processos/:processoId/reenviar-links')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  reenviarLinksPendentes(
+    @Param('processoId', ParseUUIDPipe) processoId: string,
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+  ) {
+    return this.assinaturas.reenviarLinksPendentes(processoId, usuario);
+  }
+
   @Post('signatarios/:id/reenviar-link')
   @HttpCode(200)
   @ApiBearerAuth()

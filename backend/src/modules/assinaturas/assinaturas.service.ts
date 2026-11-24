@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   GoneException,
   HttpException,
   HttpStatus,
@@ -192,6 +193,67 @@ export class AssinaturasService {
     return criados;
   }
 
+  // Transição aprovado -> aguardando_assinaturas (#68). Hoje a coordenação
+  // dispara pela rota provisória; quando a máquina de estados (#55) entrar,
+  // ela chama este método nessa transição. O status, a auditoria e os
+  // signatários vão numa transação só: se faltar algo (assinatura_incompleta),
+  // o processo continua aprovado. Os links saem depois do commit; quem não
+  // recebeu entra de novo em reenviarLinksPendentes().
+  async iniciarAssinaturas(processoId: string, usuario: UsuarioAutenticado) {
+    if (usuario.perfil !== Perfil.COORDENACAO_SES) {
+      throw new ForbiddenException('Apenas a coordenação SES inicia as assinaturas');
+    }
+    const criados = await this.prisma.$transaction(async (tx) => {
+      // A condição de status vai no próprio UPDATE: dois pedidos simultâneos
+      // não iniciam o mesmo processo duas vezes.
+      const { count } = await tx.processo.updateMany({
+        where: { id: processoId, status: StatusProcesso.aprovado },
+        data: { status: StatusProcesso.aguardando_assinaturas },
+      });
+      if (count === 0) {
+        const processo = await tx.processo.findUnique({
+          where: { id: processoId },
+          select: { status: true },
+        });
+        if (!processo) throw new NotFoundException('Processo não encontrado');
+        throw new ConflictException({
+          erro: 'transicao_invalida',
+          motivo: `Processo em ${processo.status} não pode iniciar as assinaturas, só a partir de aprovado`,
+        });
+      }
+      await this.auditoria.registrar(tx, usuario, {
+        acao: 'UPDATE',
+        entidade: 'processo',
+        entidadeId: processoId,
+        dadosAntes: { status: StatusProcesso.aprovado },
+        dadosDepois: { status: StatusProcesso.aguardando_assinaturas },
+      });
+      return this.criarSignatarios(tx, processoId, usuario);
+    });
+
+    const envio = await this.enviarLinks(processoId);
+    return {
+      processoId,
+      status: StatusProcesso.aguardando_assinaturas,
+      signatariosCriados: criados.length,
+      ...envio,
+    };
+  }
+
+  // Reenvio dos links que não saíram (falha de e-mail em iniciarAssinaturas).
+  // Manda só a quem ainda não recebeu: quem já tem link usa reenviarLink().
+  async reenviarLinksPendentes(processoId: string, usuario: UsuarioAutenticado) {
+    const processo = await this.prisma.processo.findFirst({
+      where: { id: processoId, ...this.escopo(usuario) },
+      select: { status: true },
+    });
+    if (!processo) throw new NotFoundException('Processo não encontrado');
+    if (processo.status !== StatusProcesso.aguardando_assinaturas) {
+      throw new ConflictException(`Processo em ${processo.status} não está aguardando assinaturas`);
+    }
+    return this.enviarLinks(processoId);
+  }
+
   // Depois do commit de criarSignatarios(). Manda o link a quem ainda não
   // recebeu. O representante da UNDB assina logado e não recebe link.
   // Uma falha de envio não impede os outros; quem falhou fica sem
@@ -337,6 +399,13 @@ export class AssinaturasService {
         tentativasRestantes: Math.max(OTP_MAX_TENTATIVAS - signatario.otpTentativas - 1, 0),
       });
     }
+
+    // Quem acertou já sabe o código: zera as tentativas para o caminho normal
+    // (verificar, abrir o PDF e assinar) não gastar o limite de erros.
+    await this.prisma.signatario.updateMany({
+      where: { id: signatario.id, otpHash },
+      data: { otpTentativas: 0 },
+    });
   }
 
   // URL temporária do PDF para quem tem o link e o código (RF-14: a tela só
