@@ -10,7 +10,13 @@ import { ProcessosService } from './processos.service.js';
 const COORDENACAO = { id: 'coord', perfil: Perfil.COORDENACAO_SES };
 const REPRESENTANTE = { id: 'rep', perfil: Perfil.REPRESENTANTE_UNDB };
 
-function montar(processo: { status: StatusProcesso; observacaoAnalise: string | null } | null) {
+function montar(
+  processo: {
+    status: StatusProcesso;
+    observacaoAnalise: string | null;
+    criadoPorId?: string;
+  } | null,
+) {
   const tx = {
     processo: {
       findUnique: vi.fn().mockResolvedValue(processo && { id: 'p1', ...processo }),
@@ -119,12 +125,56 @@ describe('ProcessosService.obterParaRetorno', () => {
     StatusProcesso.em_analise,
     StatusProcesso.pendencia,
     StatusProcesso.concluido,
-  ])('recusa retorno em processo %s', async (status) => {
+  ])('recusa retorno em processo %s com erro status_invalido', async (status) => {
     const { tx, service } = montar({ status, observacaoAnalise: null });
 
-    await expect(service.obterParaRetorno(tx as never, 'p1', COORDENACAO)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    const erro = await service
+      .obterParaRetorno(tx as never, 'p1', COORDENACAO)
+      .catch((e: unknown) => e);
+    expect(erro).toBeInstanceOf(ConflictException);
+    // O texto continua começando por "Processo em" para a tela que ainda lê o message.
+    expect((erro as ConflictException).getResponse()).toMatchObject({
+      erro: 'status_invalido',
+      message: `Processo em ${status} não recebe documentos de retorno`,
+    });
+  });
+});
+
+describe('ProcessosService.obterEditavel', () => {
+  const doRepresentante = (status: StatusProcesso) => ({
+    status,
+    observacaoAnalise: null,
+    criadoPorId: 'rep',
+  });
+
+  it.each([StatusProcesso.rascunho, StatusProcesso.pendencia])(
+    'libera o criador em processo %s',
+    async (status) => {
+      const { tx, service } = montar(doRepresentante(status));
+
+      await expect(service.obterEditavel(tx as never, 'p1', REPRESENTANTE)).resolves.toMatchObject({
+        status,
+      });
+    },
+  );
+
+  it.each([
+    StatusProcesso.enviado,
+    StatusProcesso.em_analise,
+    StatusProcesso.aprovado,
+    StatusProcesso.aguardando_assinaturas,
+    StatusProcesso.concluido,
+  ])('recusa processo em %s com erro status_invalido', async (status) => {
+    const { tx, service } = montar(doRepresentante(status));
+
+    const erro = await service
+      .obterEditavel(tx as never, 'p1', REPRESENTANTE)
+      .catch((e: unknown) => e);
+    expect(erro).toBeInstanceOf(ConflictException);
+    expect((erro as ConflictException).getResponse()).toMatchObject({
+      erro: 'status_invalido',
+      message: `Processo em ${status} não pode ser alterado`,
+    });
   });
 });
 

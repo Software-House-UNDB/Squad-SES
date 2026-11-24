@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { conflito } from '../../common/conflito.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { Perfil, StatusProcesso } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -177,7 +178,7 @@ export class ProcessosService {
       throw new ForbiddenException('Apenas o criador pode alterar o processo');
     }
     if (!STATUS_EDITAVEIS.includes(processo.status)) {
-      throw new ConflictException(`Processo em ${processo.status} não pode ser alterado`);
+      throw conflito('status_invalido', `Processo em ${processo.status} não pode ser alterado`);
     }
     return processo;
   }
@@ -191,7 +192,8 @@ export class ProcessosService {
     });
     if (!processo) throw new NotFoundException('Processo não encontrado');
     if (!STATUS_RETORNO.includes(processo.status)) {
-      throw new ConflictException(
+      throw conflito(
+        'status_invalido',
         `Processo em ${processo.status} não recebe documentos de retorno`,
       );
     }
