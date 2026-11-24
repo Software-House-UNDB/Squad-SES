@@ -34,6 +34,7 @@ const RETORNO = {
 function montar() {
   const tx = {
     estagiario: { findFirst: vi.fn().mockResolvedValue({ id: 'e1' }) },
+    signatario: { count: vi.fn().mockResolvedValue(0) },
     documento: {
       create: vi.fn(({ data }) => Promise.resolve({ id: 'd1', ...data })),
       // A busca por hash é a checagem de duplicata: por padrão não acha nada.
@@ -246,6 +247,16 @@ describe('DocumentosService.remover', () => {
     storage.remover.mockRejectedValue(new Error('B2 fora'));
 
     await expect(service.remover('p1', 'd1', USUARIO)).resolves.toBeUndefined();
+  });
+
+  it('recusa com 409 documento que já tem signatários, sem tentar o delete', async () => {
+    const { tx, storage, service } = montar();
+    tx.signatario.count.mockResolvedValue(4);
+
+    await expect(service.remover('p1', 'd1', USUARIO)).rejects.toBeInstanceOf(ConflictException);
+    expect(tx.signatario.count).toHaveBeenCalledWith({ where: { documentoId: 'd1' } });
+    expect(tx.documento.delete).not.toHaveBeenCalled();
+    expect(storage.remover).not.toHaveBeenCalled();
   });
 });
 

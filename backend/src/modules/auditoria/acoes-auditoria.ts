@@ -9,6 +9,8 @@ export const ACOES_AUDITORIA = [
   'ANALISE',
   // Coordenação SES anexa documento de retorno (ofício carimbado, kit de estágio...).
   'RETORNO_COORDENACAO',
+  // Ato de assinar (RF-15), uma por signatário.
+  'ASSINATURA',
 ] as const;
 
 export type AcaoAuditoria = (typeof ACOES_AUDITORIA)[number];

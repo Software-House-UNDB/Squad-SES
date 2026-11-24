@@ -129,6 +129,11 @@ export class DocumentosService {
     const documento = await this.prisma.$transaction(async (tx) => {
       await this.obterProcessoGravavel(tx, processoId, usuario);
       const { enviadoPor, ...documento } = await this.obterComAutor(tx, processoId, id);
+      // Documento enviado para assinatura (TCE com signatários) não sai mais:
+      // a FK com RESTRICT recusaria o delete com P2003, e a API daria 500.
+      if (await tx.signatario.count({ where: { documentoId: id } })) {
+        throw new ConflictException('Documento enviado para assinatura não pode ser removido');
+      }
       // Cada lado só desfaz o próprio envio: a coordenação não apaga o pacote
       // do representante, e o representante não apaga o retorno da SES. A
       // regra é por perfil, não por pessoa: qualquer usuário da coordenação
