@@ -92,7 +92,7 @@ export class DocumentosService {
           },
         });
         await this.auditoria.registrar(tx, usuario, {
-          acao: 'CREATE',
+          acao: usuario.perfil === Perfil.COORDENACAO_SES ? 'RETORNO_COORDENACAO' : 'CREATE',
           entidade: 'documento',
           entidadeId: documento.id,
           dadosDepois: documento,

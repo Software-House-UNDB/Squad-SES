@@ -44,7 +44,7 @@ describe('ProcessosService.analisar', () => {
         data: { observacaoAnalise: 'Falta o CPF' },
       });
       expect(auditoria.registrar).toHaveBeenCalledWith(tx, COORDENACAO, {
-        acao: 'UPDATE',
+        acao: 'ANALISE',
         entidade: 'processo',
         entidadeId: 'p1',
         dadosAntes: { observacaoAnalise: null },
