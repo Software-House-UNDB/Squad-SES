@@ -1,11 +1,6 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { conflito } from '../../common/conflito.js';
 import type { Documento, Prisma } from '../../generated/prisma/client.js';
 import { Perfil, TipoDocumento } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -105,7 +100,7 @@ export class DocumentosService {
       // Corrida de duplo clique: as duas requisições passaram pelo findFirst,
       // e o índice único (processo_id, hash_sha256) barrou a segunda.
       if ((erro as { code?: string }).code === 'P2002') {
-        throw new ConflictException(MENSAGEM_DUPLICADO);
+        throw conflito('arquivo_repetido', MENSAGEM_DUPLICADO);
       }
       throw erro;
     }
@@ -132,7 +127,10 @@ export class DocumentosService {
       // Documento enviado para assinatura (TCE com signatários) não sai mais:
       // a FK com RESTRICT recusaria o delete com P2003, e a API daria 500.
       if (await tx.signatario.count({ where: { documentoId: id } })) {
-        throw new ConflictException('Documento enviado para assinatura não pode ser removido');
+        throw conflito(
+          'documento_em_assinatura',
+          'Documento enviado para assinatura não pode ser removido',
+        );
       }
       // Cada lado só desfaz o próprio envio: a coordenação não apaga o pacote
       // do representante, e o representante não apaga o retorno da SES. A
@@ -205,7 +203,7 @@ export class DocumentosService {
       where: { processoId, hashSha256 },
       select: { id: true },
     });
-    if (duplicado) throw new ConflictException(MENSAGEM_DUPLICADO);
+    if (duplicado) throw conflito('arquivo_repetido', MENSAGEM_DUPLICADO);
   }
 
   private async obter(cliente: Prisma.TransactionClient, processoId: string, id: string) {

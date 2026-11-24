@@ -133,9 +133,14 @@ describe('DocumentosService.enviar', () => {
     const { tx, storage, service } = montar();
     tx.documento.findFirst.mockResolvedValue(DOCUMENTO);
 
-    await expect(
-      service.enviar('p1', PDF, { tipo: TipoDocumento.anexo }, USUARIO),
-    ).rejects.toBeInstanceOf(ConflictException);
+    const erro = await service
+      .enviar('p1', PDF, { tipo: TipoDocumento.anexo }, USUARIO)
+      .catch((e: unknown) => e);
+    expect(erro).toBeInstanceOf(ConflictException);
+    expect((erro as ConflictException).getResponse()).toMatchObject({
+      erro: 'arquivo_repetido',
+      message: 'Documento já enviado neste processo',
+    });
     expect(tx.documento.findFirst).toHaveBeenCalledWith({
       where: { processoId: 'p1', hashSha256: calcularSha256(PDF.buffer) },
       select: { id: true },
@@ -166,6 +171,7 @@ describe('DocumentosService.enviar', () => {
 
     await expect(envio).rejects.toBeInstanceOf(ConflictException);
     await expect(envio).rejects.toThrow('Documento já enviado neste processo');
+    await expect(envio).rejects.toMatchObject({ response: { erro: 'arquivo_repetido' } });
     const [chave] = storage.enviar.mock.calls[0];
     expect(storage.remover).toHaveBeenCalledWith(chave);
     expect(auditoria.registrar).not.toHaveBeenCalled();
@@ -253,7 +259,9 @@ describe('DocumentosService.remover', () => {
     const { tx, storage, service } = montar();
     tx.signatario.count.mockResolvedValue(4);
 
-    await expect(service.remover('p1', 'd1', USUARIO)).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.remover('p1', 'd1', USUARIO)).rejects.toMatchObject({
+      response: { erro: 'documento_em_assinatura' },
+    });
     expect(tx.signatario.count).toHaveBeenCalledWith({ where: { documentoId: 'd1' } });
     expect(tx.documento.delete).not.toHaveBeenCalled();
     expect(storage.remover).not.toHaveBeenCalled();
