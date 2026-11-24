@@ -92,6 +92,11 @@ describe('pacote de documentos (RF-08, RF-09, RF-10, RF-13)', () => {
     expect(validarArquivo({ type: 'image/jpeg', size: 1024 })).toMatch(/Formato/);
     expect(validarArquivo({ type: 'text/plain', size: 10 })).toMatch(/Formato/);
     expect(validarArquivo({ type: 'application/pdf', size: 21 * 1024 * 1024 })).toMatch(/20 MB/);
+    // Limite: exatamente 20 MB passa; um byte a mais não. Arquivo vazio nunca é um PDF.
+    expect(validarArquivo({ type: 'application/pdf', size: 20 * 1024 * 1024 })).toBeNull();
+    expect(validarArquivo({ type: 'application/pdf', size: 20 * 1024 * 1024 + 1 })).toMatch(/20 MB/);
+    expect(validarArquivo({ type: 'application/pdf', size: 0 })).toMatch(/vazio/);
+    expect(validarArquivo({ type: 'application/pdf', size: 1 })).toBeNull();
   });
 });
 

@@ -59,6 +59,12 @@ interface ToastState {
 /** Abertura do processo pela coordenação da SES, com análise documento a documento (RF-07, RF-08, RF-12). */
 export default function AnaliseProcesso() {
   const { id = '' } = useParams();
+  // key: ao trocar de processo (ex.: pelo histórico do navegador) o estado local — seleção,
+  // confirmação aberta, erro, aviso — recomeça do zero em vez de vazar para o outro processo.
+  return <AnaliseDoProcesso key={id} id={id} />;
+}
+
+function AnaliseDoProcesso({ id }: { id: string }) {
   const queryClient = useQueryClient();
   const chave = ['analise-processo', id];
 
