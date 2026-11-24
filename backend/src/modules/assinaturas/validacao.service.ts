@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { TipoDocumento } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { calcularSha256 } from '../documentos/arquivo.js';
 import { formatarCodigo, normalizarCodigo } from './codigo-validacao.js';
@@ -9,9 +10,24 @@ const naoEncontrado = () =>
     motivo: 'Nenhum documento com este código de validação',
   });
 
+// Nome fixo por tipo, mostrado no lugar do nome do arquivo: o nome do upload
+// é livre e pode trazer nome ou CPF do estagiário (LGPD).
+const DESCRICAO_TIPO: Record<TipoDocumento, string> = {
+  [TipoDocumento.oficio]: 'Ofício',
+  [TipoDocumento.oficio_alteracao]: 'Ofício de alteração',
+  [TipoDocumento.termo_compromisso]: 'Termo de Compromisso de Estágio',
+  [TipoDocumento.kit_estagio]: 'Kit de estágio',
+  [TipoDocumento.anexo]: 'Anexo',
+  [TipoDocumento.plano_atividades]: 'Plano de atividades',
+  [TipoDocumento.apolice]: 'Apólice de seguro',
+  [TipoDocumento.lista_indicados]: 'Lista de indicados',
+  [TipoDocumento.documento_pessoal]: 'Documento pessoal',
+  [TipoDocumento.declaracao]: 'Declaração',
+};
+
 // Validação pública de documento assinado (RF-17). Mostra o que comprova a
 // assinatura (quem, em que papel, quando, método e nível) e nada de contato
-// ou rastreio: sem e-mail, CPF, IP ou user-agent.
+// ou rastreio: sem e-mail, CPF, IP, user-agent nem o nome do arquivo.
 @Injectable()
 export class ValidacaoService {
   constructor(private readonly prisma: PrismaService) {}
@@ -26,7 +42,7 @@ export class ValidacaoService {
       situacao: pendentes.length === 0 ? 'assinado' : 'pendente',
       documento: {
         tipo: documento.tipo,
-        nomeArquivo: documento.nomeArquivo,
+        descricao: DESCRICAO_TIPO[documento.tipo],
         hashSha256: documento.hashSha256,
       },
       assinaturas: assinadas.map(({ papel, nome, assinatura }) => ({
@@ -58,7 +74,6 @@ export class ValidacaoService {
       where: { codigoValidacao: codigo },
       select: {
         tipo: true,
-        nomeArquivo: true,
         hashSha256: true,
         codigoValidacao: true,
         signatarios: {
