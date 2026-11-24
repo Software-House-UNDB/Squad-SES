@@ -92,7 +92,7 @@ export class DocumentosService {
           },
         });
         await this.auditoria.registrar(tx, usuario, {
-          acao: 'CREATE',
+          acao: usuario.perfil === Perfil.COORDENACAO_SES ? 'RETORNO_COORDENACAO' : 'CREATE',
           entidade: 'documento',
           entidadeId: documento.id,
           dadosDepois: documento,
@@ -137,7 +137,15 @@ export class DocumentosService {
       if (enviadoPor.perfil !== usuario.perfil) {
         throw new ForbiddenException('Cada lado só remove os documentos que enviou');
       }
-      await tx.documento.delete({ where: { id } });
+      try {
+        await tx.documento.delete({ where: { id } });
+      } catch (erro) {
+        // Duas exclusões simultâneas passam pela leitura; a que perde o delete recebe P2025.
+        if ((erro as { code?: string }).code === 'P2025') {
+          throw new NotFoundException('Documento não encontrado');
+        }
+        throw erro;
+      }
       await this.auditoria.registrar(tx, usuario, {
         acao: 'DELETE',
         entidade: 'documento',

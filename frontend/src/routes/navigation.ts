@@ -48,6 +48,12 @@ export const NAV_SECTIONS: NavSection[] = [
         perfis: ACCESS.listaProcessos,
       },
       {
+        to: '/gerenciamento/meus-processos',
+        label: 'Meus processos',
+        icon: FolderOpen,
+        perfis: ACCESS.meusProcessos,
+      },
+      {
         to: '/gerenciamento/analise-oficios',
         label: 'Análise de Ofícios',
         icon: FileText,

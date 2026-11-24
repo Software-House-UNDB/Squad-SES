@@ -8,6 +8,8 @@ import AcessoNegado from './pages/AcessoNegado.tsx';
 import AppShell from './components/layout/AppShell.tsx';
 import OficiosLista from './pages/Oficios/OficiosLista.tsx';
 import AnaliseProcesso from './pages/AnaliseProcesso/AnaliseProcesso.tsx';
+import CorrecaoProcesso from './pages/MeusProcessos/CorrecaoProcesso.tsx';
+import MeusProcessos from './pages/MeusProcessos/MeusProcessos.tsx';
 import NovoProcesso from './pages/NovoProcesso/NovoProcesso.tsx';
 import ListaProcessos from './pages/Processos/ListaProcessos.tsx';
 import Placeholder from './pages/Placeholder.tsx';
@@ -35,6 +37,11 @@ export default function App() {
 
           <Route element={<ProtectedRoute perfis={ACCESS.listaProcessos} />}>
             <Route path="/gerenciamento/processos" element={<ListaProcessos />} />
+          </Route>
+
+          <Route element={<ProtectedRoute perfis={ACCESS.meusProcessos} />}>
+            <Route path="/gerenciamento/meus-processos" element={<MeusProcessos />} />
+            <Route path="/gerenciamento/meus-processos/:id" element={<CorrecaoProcesso />} />
           </Route>
 
           <Route element={<ProtectedRoute perfis={ACCESS.analiseOficios} />}>

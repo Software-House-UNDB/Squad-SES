@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Route, Routes } from 'react-router-dom';
+import { Link, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearSession } from '../../auth/session.ts';
 import { queryClient } from '../../lib/queryClient.ts';
@@ -29,6 +29,44 @@ const abrir = (id: string) => {
 
 const botao = (nome: string | RegExp) => screen.getByRole('button', { name: nome });
 const naLista = (nome: RegExp) => within(screen.getByRole('navigation', { name: 'Documentos do processo' })).getByRole('button', { name: nome });
+
+describe('AnaliseProcesso — id hostil na URL', () => {
+  beforeEach(() => {
+    clearSession();
+    queryClient.clear();
+    servico.reiniciarBaseDeExemplo();
+  });
+
+  it.each(['__proto__', 'constructor', 'toString'])('id "%s" é processo não encontrado, sem quebrar a tela', async (id) => {
+    abrir(id);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Processo não encontrado.');
+  });
+
+  it('ao trocar de processo, a confirmação aberta do anterior não fica na tela', async () => {
+    loginAs('COORDENACAO_SES');
+    renderWithProviders(
+      <Routes>
+        <Route
+          path="/gerenciamento/processos/:id"
+          element={
+            <>
+              <Link to="/gerenciamento/processos/demo">ir para outro processo</Link>
+              <AnaliseProcesso />
+            </>
+          }
+        />
+      </Routes>,
+      '/gerenciamento/processos/em-analise',
+    );
+    await screen.findByRole('heading', { name: 'Processo 2026/012' });
+    await userEvent.click(screen.getByRole('button', { name: /Devolver com pendência/ }));
+    expect(screen.getByText('A UNDB precisará corrigir e reenviar:')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('link', { name: 'ir para outro processo' }));
+    await screen.findByRole('heading', { name: 'Processo 2026/014' });
+    expect(screen.queryByText('A UNDB precisará corrigir e reenviar:')).not.toBeInTheDocument();
+  });
+});
 
 describe('AnaliseProcesso', () => {
   beforeEach(() => {

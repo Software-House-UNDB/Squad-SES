@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client.js';
+import type { AcaoAuditoria } from './acoes-auditoria.js';
 import type { UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 
-export type AcaoAuditoria = 'CREATE' | 'UPDATE' | 'DELETE' | 'IMPORT_LOTE';
+export type { AcaoAuditoria } from './acoes-auditoria.js';
 
 type RegistroAuditoria = {
   acao: AcaoAuditoria;

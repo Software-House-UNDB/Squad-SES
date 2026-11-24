@@ -1,0 +1,177 @@
+/* Meus processos e correção de pendências (representante) — usa os tokens de src/index.css.
+   Botões, cartões, comentários e estados vêm de ../AnaliseProcesso/analiseProcesso.css (ap-*). */
+
+.mp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* Lista */
+.mp-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mp-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  font-family: var(--font-app);
+}
+
+.mp-vazio p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.mp-tabela-wrap {
+  overflow-x: auto;
+  /* Bloco de referência dos textos .mp-sr-only (absolutos): sem ele escapam da rolagem e alargam a página. */
+  position: relative;
+}
+
+.mp-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-app);
+  font-size: 14px;
+}
+
+.mp-tabela th,
+.mp-tabela td {
+  padding: 12px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.mp-tabela thead th {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.mp-tabela tbody th {
+  font-weight: 700;
+}
+
+.mp-acao {
+  text-align: right;
+}
+
+.mp-acao .ap-btn {
+  text-decoration: none;
+  align-self: auto;
+}
+
+/* Correção */
+.mp-voltar {
+  align-self: flex-start;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.mp-voltar:hover {
+  text-decoration: underline;
+}
+
+.mp-grupos {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mp-grupo__titulo {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.mp-docs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mp-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--app-shadow);
+}
+
+.mp-doc--pendencia {
+  border-color: var(--color-danger);
+}
+
+.mp-doc__topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.mp-doc__titulo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mp-doc__estagiario {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.mp-doc__arquivo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.mp-anexar {
+  align-self: flex-start;
+  position: relative;
+}
+
+.mp-anexar:focus-within {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.mp-anexar--off {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 960px) {
+  .mp-doc__topo {
+    flex-direction: column;
+  }
+}
