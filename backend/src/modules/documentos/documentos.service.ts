@@ -1,11 +1,6 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { conflito } from '../../common/conflito.js';
 import type { Documento, Prisma } from '../../generated/prisma/client.js';
 import { Perfil, TipoDocumento } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -92,7 +87,7 @@ export class DocumentosService {
           },
         });
         await this.auditoria.registrar(tx, usuario, {
-          acao: 'CREATE',
+          acao: usuario.perfil === Perfil.COORDENACAO_SES ? 'RETORNO_COORDENACAO' : 'CREATE',
           entidade: 'documento',
           entidadeId: documento.id,
           dadosDepois: documento,
@@ -105,7 +100,7 @@ export class DocumentosService {
       // Corrida de duplo clique: as duas requisições passaram pelo findFirst,
       // e o índice único (processo_id, hash_sha256) barrou a segunda.
       if ((erro as { code?: string }).code === 'P2002') {
-        throw new ConflictException(MENSAGEM_DUPLICADO);
+        throw conflito('arquivo_repetido', MENSAGEM_DUPLICADO);
       }
       throw erro;
     }
@@ -129,6 +124,14 @@ export class DocumentosService {
     const documento = await this.prisma.$transaction(async (tx) => {
       await this.obterProcessoGravavel(tx, processoId, usuario);
       const { enviadoPor, ...documento } = await this.obterComAutor(tx, processoId, id);
+      // Documento enviado para assinatura (TCE com signatários) não sai mais:
+      // a FK com RESTRICT recusaria o delete com P2003, e a API daria 500.
+      if (await tx.signatario.count({ where: { documentoId: id } })) {
+        throw conflito(
+          'documento_em_assinatura',
+          'Documento enviado para assinatura não pode ser removido',
+        );
+      }
       // Cada lado só desfaz o próprio envio: a coordenação não apaga o pacote
       // do representante, e o representante não apaga o retorno da SES. A
       // regra é por perfil, não por pessoa: qualquer usuário da coordenação
@@ -137,7 +140,15 @@ export class DocumentosService {
       if (enviadoPor.perfil !== usuario.perfil) {
         throw new ForbiddenException('Cada lado só remove os documentos que enviou');
       }
-      await tx.documento.delete({ where: { id } });
+      try {
+        await tx.documento.delete({ where: { id } });
+      } catch (erro) {
+        // Duas exclusões simultâneas passam pela leitura; a que perde o delete recebe P2025.
+        if ((erro as { code?: string }).code === 'P2025') {
+          throw new NotFoundException('Documento não encontrado');
+        }
+        throw erro;
+      }
       await this.auditoria.registrar(tx, usuario, {
         acao: 'DELETE',
         entidade: 'documento',
@@ -192,7 +203,7 @@ export class DocumentosService {
       where: { processoId, hashSha256 },
       select: { id: true },
     });
-    if (duplicado) throw new ConflictException(MENSAGEM_DUPLICADO);
+    if (duplicado) throw conflito('arquivo_repetido', MENSAGEM_DUPLICADO);
   }
 
   private async obter(cliente: Prisma.TransactionClient, processoId: string, id: string) {

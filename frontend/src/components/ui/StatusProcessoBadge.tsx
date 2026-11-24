@@ -3,7 +3,7 @@ import {
   STATUS_PROCESSO_LABEL,
   STATUS_PROCESSO_VARIANT,
   type StatusProcesso,
-} from '../../data/mockProcessos.ts';
+} from '../../domain/processo.ts';
 
 /** Selo colorido do status de um processo (os 7 estados da máquina de estados, RF-07). */
 export default function StatusProcessoBadge({ status }: { status: StatusProcesso }) {

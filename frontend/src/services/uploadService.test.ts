@@ -5,6 +5,8 @@ import { ArquivoRepetidoError } from './processoService.ts';
 import {
   ArquivoRecusadoError,
   enviarDocumento,
+  ProcessoForaDoStatusError,
+  SemPermissaoError,
   UploadCanceladoError,
   UploadFalhouError,
 } from './uploadService.ts';
@@ -65,6 +67,23 @@ describe('enviarDocumento', () => {
     });
     vi.spyOn(api, 'post').mockRejectedValue(erroHttp(413));
     await expect(enviarDocumento('p1', dados)).rejects.toBeInstanceOf(ArquivoRecusadoError);
+  });
+
+  it('403 vira SemPermissaoError (tipo não permitido ou documento do outro lado)', async () => {
+    vi.spyOn(api, 'post').mockRejectedValue(erroHttp(403, { message: 'A coordenação não envia documentos do tipo apolice' }));
+    await expect(enviarDocumento('p1', dados)).rejects.toBeInstanceOf(SemPermissaoError);
+  });
+
+  it('409 por status do processo vira ProcessoForaDoStatusError, e não "arquivo repetido"', async () => {
+    vi.spyOn(api, 'post').mockRejectedValue(
+      erroHttp(409, { message: 'Processo em concluido não recebe documentos de retorno' }),
+    );
+    await expect(enviarDocumento('p1', dados)).rejects.toBeInstanceOf(ProcessoForaDoStatusError);
+  });
+
+  it('409 de documento duplicado continua sendo ArquivoRepetidoError', async () => {
+    vi.spyOn(api, 'post').mockRejectedValue(erroHttp(409, { message: 'Documento já enviado neste processo' }));
+    await expect(enviarDocumento('p1', dados)).rejects.toBeInstanceOf(ArquivoRepetidoError);
   });
 
   it('cancelamento vira UploadCanceladoError', async () => {

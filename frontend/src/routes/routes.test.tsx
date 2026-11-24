@@ -57,6 +57,30 @@ describe('rotas protegidas por perfil', () => {
     expect(heading('Acesso negado')).toBeInTheDocument();
   });
 
+  it('representante da IES abre a lista e a correção de um processo', async () => {
+    loginAs('REPRESENTANTE_UNDB');
+    const lista = renderApp('/gerenciamento/meus-processos');
+    expect(heading('Meus processos')).toBeInTheDocument();
+    lista.unmount();
+
+    renderApp('/gerenciamento/meus-processos/devolvido');
+    expect(await screen.findByRole('heading', { name: 'Processo 2026/011' })).toBeInTheDocument();
+  });
+
+  it.each(['/gerenciamento/meus-processos', '/gerenciamento/meus-processos/devolvido'])(
+    'coordenação não acessa %s',
+    (path) => {
+      loginAs('COORDENACAO_SES');
+      renderApp(path);
+      expect(heading('Acesso negado')).toBeInTheDocument();
+    },
+  );
+
+  it('visitante é mandado ao login ao abrir a correção de um processo', () => {
+    renderApp('/gerenciamento/meus-processos/devolvido');
+    expect(heading('Entrar')).toBeInTheDocument();
+  });
+
   it('representante da IES acessa o dashboard', () => {
     loginAs('REPRESENTANTE_UNDB');
     renderApp('/dashboard');

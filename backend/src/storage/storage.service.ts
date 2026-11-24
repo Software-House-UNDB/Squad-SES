@@ -36,6 +36,15 @@ export class StorageService {
     );
   }
 
+  // Conteúdo exato guardado no bucket. A assinatura calcula o hash sobre ele.
+  async baixar(chave: string): Promise<Buffer> {
+    const resposta = await this.obterCliente().send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: chave }),
+    );
+    if (!resposta.Body) throw new Error(`Objeto ${chave} sem conteúdo no storage`);
+    return Buffer.from(await resposta.Body.transformToByteArray());
+  }
+
   async remover(chave: string) {
     await this.obterCliente().send(new DeleteObjectCommand({ Bucket: this.bucket, Key: chave }));
   }

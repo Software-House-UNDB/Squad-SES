@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { conflito } from '../../common/conflito.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { Perfil, StatusProcesso } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -44,7 +45,12 @@ export class ProcessosService {
   criar(dto: CriarProcessoDto, usuario: UsuarioAutenticado) {
     return this.prisma.$transaction(async (tx) => {
       const processo = await tx.processo.create({
-        data: { tipoEstagio: dto.tipoEstagio, criadoPorId: usuario.id },
+        data: {
+          tipoEstagio: dto.tipoEstagio,
+          supervisorNome: dto.supervisorNome,
+          supervisorEmail: dto.supervisorEmail,
+          criadoPorId: usuario.id,
+        },
       });
       await this.auditoria.registrar(tx, usuario, {
         acao: 'CREATE',
@@ -88,7 +94,11 @@ export class ProcessosService {
       const antes = await this.obterEditavel(tx, id, usuario);
       const depois = await tx.processo.update({
         where: { id },
-        data: { tipoEstagio: dto.tipoEstagio },
+        data: {
+          tipoEstagio: dto.tipoEstagio,
+          supervisorNome: dto.supervisorNome,
+          supervisorEmail: dto.supervisorEmail,
+        },
       });
       await this.auditoria.registrar(tx, usuario, {
         acao: 'UPDATE',
@@ -117,7 +127,7 @@ export class ProcessosService {
         data: { observacaoAnalise: dto.observacaoAnalise },
       });
       await this.auditoria.registrar(tx, usuario, {
-        acao: 'UPDATE',
+        acao: 'ANALISE',
         entidade: 'processo',
         entidadeId: id,
         dadosAntes: { observacaoAnalise: antes.observacaoAnalise },
@@ -168,7 +178,7 @@ export class ProcessosService {
       throw new ForbiddenException('Apenas o criador pode alterar o processo');
     }
     if (!STATUS_EDITAVEIS.includes(processo.status)) {
-      throw new ConflictException(`Processo em ${processo.status} não pode ser alterado`);
+      throw conflito('status_invalido', `Processo em ${processo.status} não pode ser alterado`);
     }
     return processo;
   }
@@ -182,7 +192,8 @@ export class ProcessosService {
     });
     if (!processo) throw new NotFoundException('Processo não encontrado');
     if (!STATUS_RETORNO.includes(processo.status)) {
-      throw new ConflictException(
+      throw conflito(
+        'status_invalido',
         `Processo em ${processo.status} não recebe documentos de retorno`,
       );
     }

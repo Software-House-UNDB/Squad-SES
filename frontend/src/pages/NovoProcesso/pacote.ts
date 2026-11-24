@@ -60,6 +60,7 @@ export function docsDoEstagiario(cpf: string, menor: boolean): SlotDoc[] {
 /** Mensagem de erro se o arquivo não puder ser anexado; `null` se estiver tudo certo. */
 export function validarArquivo(arquivo: { size: number; type: string }): string | null {
   if (!TIPOS_ACEITOS.includes(arquivo.type)) return 'Formato não aceito. Envie o arquivo em PDF.';
+  if (arquivo.size === 0) return 'O arquivo está vazio. Escolha um PDF com conteúdo.';
   if (arquivo.size > LIMITE_MB * 1024 * 1024) {
     const mb = (arquivo.size / 1024 / 1024).toFixed(1).replace('.', ',');
     return `O arquivo tem ${mb} MB. O limite é ${LIMITE_MB} MB.`;

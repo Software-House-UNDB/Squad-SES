@@ -16,8 +16,12 @@ describe('menu por perfil', () => {
     ]);
   });
 
-  it('representante da IES vê início e novo processo, sem seções vazias', () => {
-    expect(links('REPRESENTANTE_UNDB')).toEqual(['/dashboard', '/gerenciamento/novo-processo']);
+  it('representante da IES vê início, novo processo e meus processos, sem seções vazias', () => {
+    expect(links('REPRESENTANTE_UNDB')).toEqual([
+      '/dashboard',
+      '/gerenciamento/novo-processo',
+      '/gerenciamento/meus-processos',
+    ]);
     expect(navFor('REPRESENTANTE_UNDB')).toHaveLength(2);
   });
 });
