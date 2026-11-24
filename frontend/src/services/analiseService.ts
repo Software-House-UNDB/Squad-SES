@@ -17,8 +17,8 @@ import {
   type DocumentoAnalise,
   type ProcessoAnalise,
   type ResumoProcesso,
-  type StatusProcesso,
 } from '../pages/AnaliseProcesso/analise.ts';
+import type { StatusProcesso } from '../domain/processo.ts';
 import { ArquivoRepetidoError } from './processoService.ts';
 
 export class ProcessoNaoEncontradoError extends Error {
@@ -37,6 +37,7 @@ export class TransicaoInvalidaError extends Error {
 }
 
 const AUTOR = 'Coordenação SES';
+const CRIADOR_DE_EXEMPLO = 'representante-undb-exemplo';
 const atraso = () =>
   new Promise((resolve) => setTimeout(resolve, import.meta.env.MODE === 'test' ? 0 : 400));
 
@@ -118,6 +119,7 @@ function criarBase(): Record<string, ProcessoAnalise> {
       id: 'demo',
       numero: '2026/014',
       status: 'enviado',
+      criadoPorId: CRIADOR_DE_EXEMPLO,
       instituicao: 'UNDB',
       enviadoEm: '2026-11-10T13:20:00.000Z',
       estagiarios: 2,
@@ -127,6 +129,7 @@ function criarBase(): Record<string, ProcessoAnalise> {
       id: 'em-analise',
       numero: '2026/012',
       status: 'em_analise',
+      criadoPorId: CRIADOR_DE_EXEMPLO,
       instituicao: 'UNDB',
       enviadoEm: '2026-11-05T09:10:00.000Z',
       estagiarios: 2,
@@ -136,6 +139,7 @@ function criarBase(): Record<string, ProcessoAnalise> {
       id: 'devolvido',
       numero: '2026/011',
       status: 'pendencia',
+      criadoPorId: CRIADOR_DE_EXEMPLO,
       instituicao: 'UNDB',
       enviadoEm: '2026-11-03T11:00:00.000Z',
       estagiarios: 2,
@@ -145,6 +149,7 @@ function criarBase(): Record<string, ProcessoAnalise> {
       id: 'aprovado',
       numero: '2026/009',
       status: 'aguardando_assinaturas',
+      criadoPorId: CRIADOR_DE_EXEMPLO,
       instituicao: 'UNDB',
       enviadoEm: '2026-10-30T16:45:00.000Z',
       estagiarios: 2,

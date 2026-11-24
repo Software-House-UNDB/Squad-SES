@@ -1,40 +1,7 @@
-import type { BadgeVariant } from '../components/ui/Badge.tsx';
+import type { StatusProcesso } from '../domain/processo.ts';
 
 // Dados fictícios da Lista de processos (esqueleto). Substituir pela API quando a task de
 // integração entrar (Sprint 2). Os campos seguem a tabela `processos` do backend.
-
-// Máquina de estados do processo (RF-07), igual ao enum StatusProcesso do Prisma.
-export const STATUS_PROCESSO = [
-  'rascunho',
-  'enviado',
-  'em_analise',
-  'pendencia',
-  'aprovado',
-  'aguardando_assinaturas',
-  'concluido',
-] as const;
-
-export type StatusProcesso = (typeof STATUS_PROCESSO)[number];
-
-export const STATUS_PROCESSO_LABEL: Record<StatusProcesso, string> = {
-  rascunho: 'Rascunho',
-  enviado: 'Enviado',
-  em_analise: 'Em análise',
-  pendencia: 'Pendência',
-  aprovado: 'Aprovado',
-  aguardando_assinaturas: 'Aguardando assinaturas',
-  concluido: 'Concluído',
-};
-
-export const STATUS_PROCESSO_VARIANT: Record<StatusProcesso, BadgeVariant> = {
-  rascunho: 'neutral',
-  enviado: 'info',
-  em_analise: 'pending',
-  pendencia: 'warning',
-  aprovado: 'approved',
-  aguardando_assinaturas: 'info',
-  concluido: 'closed',
-};
 
 /** Um lote semestral de documentação de estagiários enviado pela UNDB. */
 export interface ProcessoResumo {

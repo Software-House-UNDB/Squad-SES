@@ -10,7 +10,8 @@ const assinatura = { assinadoEm: ASSINADO_EM, metodo: 'OTP', nivel: 'SIMPLES' };
 
 const DOCUMENTO = {
   tipo: 'termo_compromisso',
-  nomeArquivo: 'tce-ana.pdf',
+  // O nome do upload pode trazer dados do estagiário: não sai na resposta.
+  nomeArquivo: 'TCE_Ana_Lima_123.456.789-00.pdf',
   hashSha256: calcularSha256(PDF),
   codigoValidacao: '7K3M9QX2HV4T',
   signatarios: [
@@ -39,7 +40,7 @@ describe('ValidacaoService.consultar', () => {
       situacao: 'pendente',
       documento: {
         tipo: 'termo_compromisso',
-        nomeArquivo: 'tce-ana.pdf',
+        descricao: 'Termo de Compromisso de Estágio',
         hashSha256: DOCUMENTO.hashSha256,
       },
       assinaturas: [
@@ -53,8 +54,11 @@ describe('ValidacaoService.consultar', () => {
       ],
       pendentes: [{ papel: PapelSignatario.ESTAGIARIO }],
     });
+    expect(JSON.stringify(resposta)).not.toMatch(/Ana_Lima|123\.456/);
     const selecao = JSON.stringify(prisma.documento.findUnique.mock.calls[0][0].select);
-    expect(selecao).not.toMatch(/"(email|cpf|ip|userAgent|storageKey|tokenHash|otpHash)"/);
+    expect(selecao).not.toMatch(
+      /"(email|cpf|ip|userAgent|storageKey|tokenHash|otpHash|nomeArquivo)"/,
+    );
   });
 
   it('com todos assinados, a situação é "assinado"', async () => {

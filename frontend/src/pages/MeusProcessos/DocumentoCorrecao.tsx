@@ -7,8 +7,8 @@ import {
   ultimaPendencia,
   type DecisaoDoc,
   type DocumentoAnalise,
-  type StatusProcesso,
 } from '../AnaliseProcesso/analise.ts';
+import type { StatusProcesso } from '../../domain/processo.ts';
 import { ACCEPT, formatarTamanho } from '../NovoProcesso/pacote.ts';
 
 // Na visão do representante, "não analisado" é "aguardando análise": ou a SES ainda não chegou
