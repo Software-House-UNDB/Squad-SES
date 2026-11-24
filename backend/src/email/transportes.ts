@@ -23,6 +23,14 @@ export type ConfiguracaoSmtp = {
   pass?: string;
 };
 
+// Em milissegundos. Com 4 signatários por processo, o enviarLinks() espera no
+// máximo alguns segundos por envio em vez de minutos.
+export const TIMEOUTS_SMTP = {
+  connectionTimeout: 10_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 20_000,
+} as const;
+
 export class TransporteSmtp implements TransporteEmail {
   private readonly transporter: Transporter;
 
@@ -33,6 +41,9 @@ export class TransporteSmtp implements TransporteEmail {
       secure: config.secure,
       // O Mailpit local não pede autenticação.
       auth: config.user ? { user: config.user, pass: config.pass } : undefined,
+      // Os padrões do Nodemailer (2 min para conectar, 10 min de socket) deixariam
+      // cada envio pendurado se a porta estiver bloqueada, como no free do Render.
+      ...TIMEOUTS_SMTP,
     });
   }
 

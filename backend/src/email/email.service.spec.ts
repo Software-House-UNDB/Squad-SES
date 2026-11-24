@@ -1,6 +1,7 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { EmailService } from './email.service.js';
+import { TIMEOUTS_SMTP } from './transportes.js';
 
 const sendMail = vi.fn();
 const createTransport = vi.fn((_opcoes: unknown) => ({ sendMail }));
@@ -65,6 +66,7 @@ describe('EmailService', () => {
       port: 465,
       secure: true,
       auth: { user: 'usuario', pass: 'segredo' },
+      ...TIMEOUTS_SMTP,
     });
     expect(sendMail).toHaveBeenCalledWith({
       from: 'SES <ses@exemplo.com>',
@@ -85,6 +87,7 @@ describe('EmailService', () => {
       port: 587,
       secure: false,
       auth: undefined,
+      ...TIMEOUTS_SMTP,
     });
     expect(sendMail.mock.calls[0][0].from).toContain('nao-responda');
   });
