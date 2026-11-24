@@ -1,5 +1,7 @@
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   GoneException,
   HttpException,
   NotFoundException,
@@ -91,7 +93,10 @@ function montar(config: Record<string, string | undefined> = CONFIG) {
     $queryRaw: vi.fn().mockResolvedValue([{ status: StatusProcesso.aguardando_assinaturas }]),
     documento: { update: vi.fn() },
   };
-  Object.assign(tx.processo, { update: vi.fn() });
+  Object.assign(tx.processo, {
+    update: vi.fn(),
+    updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+  });
   const prisma = {
     signatario: {
       findMany: vi.fn().mockResolvedValue([]),
@@ -341,6 +346,153 @@ describe('AssinaturasService.enviarLinks', () => {
   });
 });
 
+describe('AssinaturasService.iniciarAssinaturas', () => {
+  it('muda o status só se estiver aprovado, audita e cria os signatários na transação', async () => {
+    const { service, tx, auditoria } = montar();
+
+    const resultado = await service.iniciarAssinaturas('p1', COORDENACAO);
+
+    expect(tx.processo.updateMany).toHaveBeenCalledWith({
+      where: { id: 'p1', status: StatusProcesso.aprovado },
+      data: { status: StatusProcesso.aguardando_assinaturas },
+    });
+    expect(auditoria.registrar).toHaveBeenCalledWith(tx, COORDENACAO, {
+      acao: 'UPDATE',
+      entidade: 'processo',
+      entidadeId: 'p1',
+      dadosAntes: { status: StatusProcesso.aprovado },
+      dadosDepois: { status: StatusProcesso.aguardando_assinaturas },
+    });
+    expect(tx.signatario.create).toHaveBeenCalledTimes(4);
+    expect(resultado).toMatchObject({
+      processoId: 'p1',
+      status: StatusProcesso.aguardando_assinaturas,
+      signatariosCriados: 4,
+    });
+  });
+
+  it('envia os links só depois da transação', async () => {
+    const { service, prisma, tx } = montar();
+    const ordem: string[] = [];
+    tx.signatario.create.mockImplementation(({ data }) => {
+      ordem.push('create');
+      return Promise.resolve({ id: 'novo', ...data });
+    });
+    prisma.signatario.findMany.mockImplementation(() => {
+      ordem.push('enviarLinks');
+      return Promise.resolve([]);
+    });
+
+    await service.iniciarAssinaturas('p1', COORDENACAO);
+
+    expect(ordem.at(-1)).toBe('enviarLinks');
+    expect(ordem.filter((passo) => passo === 'create')).toHaveLength(4);
+  });
+
+  it('devolve as falhas de envio sem desfazer a transição', async () => {
+    const { service, prisma, email, tx } = montar();
+    prisma.signatario.findMany.mockResolvedValue([
+      { id: 's1', nome: 'Sup', email: 'sup@exemplo.com', papel: PapelSignatario.SUPERVISOR },
+    ]);
+    email.enviar.mockRejectedValue(new Error('SMTP fora'));
+
+    const resultado = await service.iniciarAssinaturas('p1', COORDENACAO);
+
+    expect(resultado).toMatchObject({
+      enviados: 0,
+      falhas: [{ signatarioId: 's1', papel: PapelSignatario.SUPERVISOR }],
+    });
+    expect(tx.processo.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    StatusProcesso.rascunho,
+    StatusProcesso.enviado,
+    StatusProcesso.em_analise,
+    StatusProcesso.pendencia,
+    StatusProcesso.aguardando_assinaturas,
+    StatusProcesso.concluido,
+  ])('recusa processo em %s com 409, sem criar signatários', async (status) => {
+    const { service, tx, prisma } = montar();
+    tx.processo.updateMany.mockResolvedValue({ count: 0 });
+    tx.processo.findUnique.mockResolvedValue({ status });
+
+    const { status: http, corpo } = await respostaDe(service.iniciarAssinaturas('p1', COORDENACAO));
+
+    expect(http).toBe(409);
+    expect(corpo).toMatchObject({ erro: 'transicao_invalida' });
+    expect(tx.signatario.create).not.toHaveBeenCalled();
+    expect(prisma.signatario.findMany).not.toHaveBeenCalled();
+  });
+
+  it('responde 404 para processo inexistente', async () => {
+    const { service, tx } = montar();
+    tx.processo.updateMany.mockResolvedValue({ count: 0 });
+    tx.processo.findUnique.mockResolvedValue(null);
+
+    await expect(service.iniciarAssinaturas('p1', COORDENACAO)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('pendência nos dados derruba a transação e não envia nada', async () => {
+    const { service, tx, prisma } = montar();
+    tx.processo.findUnique.mockResolvedValue({ ...PROCESSO, supervisorEmail: null });
+
+    await expect(service.iniciarAssinaturas('p1', COORDENACAO)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.signatario.findMany).not.toHaveBeenCalled();
+  });
+
+  it('só a coordenação SES inicia', async () => {
+    const { service, tx } = montar();
+
+    await expect(service.iniciarAssinaturas('p1', REPRESENTANTE)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(tx.processo.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('AssinaturasService.reenviarLinksPendentes', () => {
+  it('reenvia os pendentes de um processo aguardando assinaturas', async () => {
+    const { service, prisma, email } = montar();
+    prisma.processo.findFirst.mockResolvedValue({ status: StatusProcesso.aguardando_assinaturas });
+    prisma.signatario.findMany.mockResolvedValue([
+      { id: 's1', nome: 'Sup', email: 'sup@exemplo.com', papel: PapelSignatario.SUPERVISOR },
+    ]);
+
+    await expect(service.reenviarLinksPendentes('p1', COORDENACAO)).resolves.toEqual({
+      enviados: 1,
+      falhas: [],
+    });
+    expect(email.enviar).toHaveBeenCalledTimes(1);
+  });
+
+  it('limita o representante aos próprios processos', async () => {
+    const { service, prisma } = montar();
+    prisma.processo.findFirst.mockResolvedValue(null);
+
+    await expect(service.reenviarLinksPendentes('p1', REPRESENTANTE)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(prisma.processo.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'p1', criadoPorId: 'rep' } }),
+    );
+  });
+
+  it('recusa processo fora de aguardando_assinaturas', async () => {
+    const { service, prisma } = montar();
+    prisma.processo.findFirst.mockResolvedValue({ status: StatusProcesso.aprovado });
+
+    await expect(service.reenviarLinksPendentes('p1', COORDENACAO)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(prisma.signatario.findMany).not.toHaveBeenCalled();
+  });
+});
+
 describe('AssinaturasService.reenviarLink', () => {
   it('gera link novo e audita sem o token', async () => {
     const { service, prisma, email, auditoria } = montar();
@@ -518,6 +670,28 @@ describe('AssinaturasService.verificarOtp', () => {
       },
       data: { otpTentativas: { increment: 1 } },
     });
+  });
+
+  it('código certo zera as tentativas, para o caminho normal não gastar o limite', async () => {
+    const { service, prisma } = montar();
+    const signatario = await comOtp({ otpTentativas: 2 });
+    prisma.signatario.findUnique.mockResolvedValue(signatario);
+
+    await service.verificarOtp(TOKEN, CODIGO);
+
+    expect(prisma.signatario.updateMany).toHaveBeenLastCalledWith({
+      where: { id: 's1', otpHash: signatario.otpHash },
+      data: { otpTentativas: 0 },
+    });
+  });
+
+  it('código errado não zera as tentativas', async () => {
+    const { service, prisma } = montar();
+    prisma.signatario.findUnique.mockResolvedValue(await comOtp());
+
+    await service.verificarOtp(TOKEN, '999999').catch(() => undefined);
+
+    expect(prisma.signatario.updateMany).toHaveBeenCalledTimes(1);
   });
 
   it('código errado responde 400 com as tentativas restantes', async () => {

@@ -11,7 +11,8 @@ import { ValidacaoService } from './validacao.service.js';
   imports: [AuditoriaModule, EmailModule, StorageModule],
   controllers: [AssinaturasController, ValidacaoController],
   providers: [AssinaturasService, ValidacaoService],
-  // A transição aprovado -> aguardando_assinaturas chama criarSignatarios() e enviarLinks().
+  // A máquina de estados (#55) chama iniciarAssinaturas() na transição
+  // aprovado -> aguardando_assinaturas.
   exports: [AssinaturasService],
 })
 export class AssinaturasModule {}
