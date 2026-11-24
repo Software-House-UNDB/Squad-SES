@@ -26,6 +26,7 @@ import { StorageService } from '../../storage/storage.service.js';
 import { calcularSha256 } from '../documentos/arquivo.js';
 import { AuditoriaService } from '../auditoria/auditoria.service.js';
 import type { UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
+import { formatarCodigo, gerarCodigoValidacao } from './codigo-validacao.js';
 import { emailCodigoOtp, emailLinkAssinatura } from './emails.js';
 import { FORMATO_TOKEN, gerarOtp, gerarToken, hashToken, mascararEmail } from './tokens.js';
 
@@ -54,6 +55,7 @@ const INCLUIR_NO_LINK = {
       id: true,
       tipo: true,
       nomeArquivo: true,
+      codigoValidacao: true,
       mimeType: true,
       storageKey: true,
       hashSha256: true,
@@ -165,6 +167,14 @@ export class AssinaturasService {
         },
       ];
       const existentes = new Set(documento.signatarios.map(({ papel }) => papel));
+
+      // Código público de validação (RF-17): nasce junto com os signatários.
+      if (!documento.codigoValidacao) {
+        await tx.documento.update({
+          where: { id: documento.id },
+          data: { codigoValidacao: gerarCodigoValidacao() },
+        });
+      }
 
       for (const dados of todos.filter(({ papel }) => !existentes.has(papel))) {
         const signatario = await tx.signatario.create({
@@ -392,6 +402,7 @@ export class AssinaturasService {
             tipo: true,
             nomeArquivo: true,
             estagiarioId: true,
+            codigoValidacao: true,
             signatarios: {
               orderBy: { papel: 'asc' },
               select: {
@@ -412,7 +423,13 @@ export class AssinaturasService {
       },
     });
     if (!processo) throw new NotFoundException('Processo não encontrado');
-    return processo;
+    return {
+      ...processo,
+      documentos: processo.documentos.map((documento) => ({
+        ...documento,
+        codigoValidacao: documento.codigoValidacao && formatarCodigo(documento.codigoValidacao),
+      })),
+    };
   }
 
   // Grava a assinatura e as evidências numa transação só, com a auditoria e,
@@ -507,6 +524,7 @@ export class AssinaturasService {
           metodo,
           nivel: assinatura.nivel,
           hashSha256,
+          codigoValidacao: documento.codigoValidacao && formatarCodigo(documento.codigoValidacao),
           processoConcluido: pendentes === 0,
         };
       });
