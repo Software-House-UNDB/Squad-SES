@@ -165,6 +165,7 @@ describe('podeReenviar (RF-07, RF-08)', () => {
 const processo = (over: Partial<ProcessoAnalise> & Pick<ProcessoAnalise, 'id'>): ProcessoAnalise => ({
   numero: `2026/${over.id}`,
   status: 'enviado',
+  criadoPorId: 'representante-1',
   instituicao: 'UNDB',
   enviadoEm: '2026-11-10T13:20:00.000Z',
   estagiarios: 2,

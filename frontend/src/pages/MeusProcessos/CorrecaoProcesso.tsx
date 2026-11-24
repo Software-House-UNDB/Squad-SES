@@ -28,6 +28,7 @@ import {
 } from '../../domain/processo.ts';
 import { hashDoArquivo, MSG_ARQUIVO_REPETIDO, validarArquivo } from '../NovoProcesso/pacote.ts';
 import '../AnaliseProcesso/analiseProcesso.css';
+import RetornoSES from '../AnaliseProcesso/RetornoSES.tsx';
 import DocumentoCorrecao from './DocumentoCorrecao.tsx';
 import './meusProcessos.css';
 
@@ -260,6 +261,8 @@ function CorrecaoDoProcesso({ id }: { id: string }) {
             </section>
           ))}
         </div>
+
+        <RetornoSES processoId={id} status={status} criadoPorId={processo.criadoPorId} />
       </div>
 
       {confirmando && (

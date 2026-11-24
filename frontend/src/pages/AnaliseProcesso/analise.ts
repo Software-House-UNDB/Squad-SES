@@ -34,6 +34,8 @@ export interface ProcessoAnalise {
   id: string;
   numero: string;
   status: StatusProcesso;
+  /** Quem criou o processo (representante da UNDB); separa o pacote da UNDB do retorno da SES. */
+  criadoPorId: string;
   instituicao: string;
   enviadoEm: string;
   estagiarios: number;

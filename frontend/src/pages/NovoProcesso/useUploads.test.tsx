@@ -2,10 +2,30 @@ import { act, render, renderHook, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { ArquivoRepetidoError } from '../../services/processoService.ts';
-import { UploadCanceladoError, UploadFalhouError } from '../../services/uploadService.ts';
+import {
+  ProcessoForaDoStatusError,
+  SemPermissaoError,
+  UploadCanceladoError,
+  UploadFalhouError,
+} from '../../services/uploadService.ts';
 import ArquivoSlot from './ArquivoSlot.tsx';
 import { MSG_ARQUIVO_REPETIDO } from './pacote.ts';
-import { MSG_FALHA_UPLOAD, useUploads } from './useUploads.ts';
+import {
+  MSG_FALHA_UPLOAD,
+  MSG_FORA_DO_STATUS,
+  MSG_SEM_PERMISSAO,
+  mensagemDeErro,
+  useUploads,
+} from './useUploads.ts';
+
+describe('mensagemDeErro', () => {
+  it('traduz 403 e 409 de status em mensagens amigáveis', () => {
+    expect(mensagemDeErro(new SemPermissaoError())).toBe(MSG_SEM_PERMISSAO);
+    expect(mensagemDeErro(new ProcessoForaDoStatusError())).toBe(MSG_FORA_DO_STATUS);
+    expect(MSG_SEM_PERMISSAO).not.toBe(MSG_FALHA_UPLOAD);
+    expect(MSG_FORA_DO_STATUS).toMatch(/status/);
+  });
+});
 
 describe('useUploads', () => {
   it('acompanha o progresso e termina como enviado', async () => {
