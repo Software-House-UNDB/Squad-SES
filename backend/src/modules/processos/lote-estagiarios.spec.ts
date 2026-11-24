@@ -142,6 +142,20 @@ describe('lerLote', () => {
     ]);
   });
 
+  it('lê o e-mail do estagiário, normalizado, e aponta e-mail inválido', async () => {
+    const { validos, invalidos } = await lerLote(
+      csv(
+        'nome,cpf,matricula,curso,email',
+        'Ana,52998224725,M1,Enfermagem, Ana.Lima@Exemplo.com ',
+        'Bia,11144477735,M2,Medicina,',
+        'Caio,39053344705,M3,Medicina,caio@',
+      ),
+    );
+
+    expect(validos.map(({ dto }) => dto.email)).toEqual(['ana.lima@exemplo.com', undefined]);
+    expect(invalidos).toEqual([{ linha: 4, campo: 'email', motivo: 'e-mail inválido' }]);
+  });
+
   it('aponta linha com número errado de colunas', async () => {
     const { invalidos } = await lerLote(csv(CABECALHO, 'Ana,52998224725'));
 
