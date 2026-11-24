@@ -4,6 +4,8 @@ import type { Perfil } from '../../generated/prisma/enums.js';
 export type UsuarioAutenticado = {
   id: string;
   perfil: Perfil;
+  // Escopo institucional (ABAC). Ausente ou nulo significa sem instituição: o representante não vê processos.
+  instituicao?: string | null;
   ip?: string;
 };
 

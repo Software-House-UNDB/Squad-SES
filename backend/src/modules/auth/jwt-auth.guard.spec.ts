@@ -19,7 +19,7 @@ function contexto(authorization?: string) {
   return { requisicao, ctx };
 }
 
-const PAYLOAD = { sub: 'u1', perfil: Perfil.REPRESENTANTE_UNDB };
+const PAYLOAD = { sub: 'u1', perfil: Perfil.REPRESENTANTE_UNDB, instituicao: 'UNDB' };
 
 describe('JwtAuthGuard', () => {
   it('libera token válido e preenche requisicao.usuario', async () => {
@@ -27,7 +27,22 @@ describe('JwtAuthGuard', () => {
     const { requisicao, ctx } = contexto(`Bearer ${token}`);
 
     await expect(guard.canActivate(ctx)).resolves.toBe(true);
-    expect(requisicao.usuario).toEqual({ id: 'u1', perfil: Perfil.REPRESENTANTE_UNDB });
+    expect(requisicao.usuario).toEqual({
+      id: 'u1',
+      perfil: Perfil.REPRESENTANTE_UNDB,
+      instituicao: 'UNDB',
+    });
+  });
+
+  it('token antigo, sem instituição, vira instituição nula (falha fechada)', async () => {
+    const token = await jwt.signAsync(
+      { sub: 'u1', perfil: Perfil.REPRESENTANTE_UNDB },
+      { secret: ACCESS },
+    );
+    const { requisicao, ctx } = contexto(`Bearer ${token}`);
+
+    await guard.canActivate(ctx);
+    expect(requisicao.usuario).toMatchObject({ instituicao: null });
   });
 
   it.each([undefined, 'Basic abc', 'Bearer'])('recusa cabeçalho %j', async (cabecalho) => {

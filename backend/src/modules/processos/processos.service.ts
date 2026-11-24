@@ -8,6 +8,7 @@ import { conflito } from '../../common/conflito.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { Perfil, StatusProcesso } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { escopoProcesso } from '../auth/escopo-processo.js';
 import type { UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import { AuditoriaService } from '../auditoria/auditoria.service.js';
 import {
@@ -174,7 +175,9 @@ export class ProcessosService {
       where: { id, ...this.escopo(usuario) },
     });
     if (!processo) throw new NotFoundException('Processo não encontrado');
-    if (processo.criadoPorId !== usuario.id) {
+    // O escopo já garante que o representante é da mesma instituição (opção A da issue #54).
+    // A coordenação continua podendo alterar só o que criou.
+    if (usuario.perfil === Perfil.COORDENACAO_SES && processo.criadoPorId !== usuario.id) {
       throw new ForbiddenException('Apenas o criador pode alterar o processo');
     }
     if (!STATUS_EDITAVEIS.includes(processo.status)) {
@@ -200,9 +203,8 @@ export class ProcessosService {
     return processo;
   }
 
-  // O representante só enxerga os próprios processos, e a resposta é 404
-  // para não revelar que um processo de outra pessoa existe.
+  // Escopo institucional: ver escopo-processo.ts. Fora do escopo a resposta é 404.
   private escopo(usuario: UsuarioAutenticado): Prisma.ProcessoWhereInput {
-    return usuario.perfil === Perfil.COORDENACAO_SES ? {} : { criadoPorId: usuario.id };
+    return escopoProcesso(usuario);
   }
 }

@@ -26,6 +26,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { StorageService } from '../../storage/storage.service.js';
 import { calcularSha256 } from '../documentos/arquivo.js';
 import { AuditoriaService } from '../auditoria/auditoria.service.js';
+import { escopoProcesso } from '../auth/escopo-processo.js';
 import type { UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import { formatarCodigo, gerarCodigoValidacao } from './codigo-validacao.js';
 import { emailCodigoOtp, emailLinkAssinatura } from './emails.js';
@@ -696,10 +697,8 @@ export class AssinaturasService {
     return { nome, email: email.trim().toLowerCase() };
   }
 
-  // Mesma regra do ProcessosService: o representante só vê os próprios
-  // processos, com 404 para não revelar os dos outros. Duplicada aqui para
-  // o ProcessosModule poder importar este módulo na transição de status.
+  // Mesmo escopo institucional do ProcessosService (ver escopo-processo.ts).
   private escopo(usuario: UsuarioAutenticado): Prisma.ProcessoWhereInput {
-    return usuario.perfil === Perfil.COORDENACAO_SES ? {} : { criadoPorId: usuario.id };
+    return escopoProcesso(usuario);
   }
 }

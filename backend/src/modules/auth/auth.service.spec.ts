@@ -47,7 +47,11 @@ describe('AuthService.login', () => {
     });
     expect(resposta.usuario).not.toHaveProperty('senhaHash');
     const payload = await jwt.verifyAsync<TokenPayload>(resposta.accessToken, { secret: ACCESS });
-    expect(payload).toMatchObject({ sub: 'u1', perfil: Perfil.COORDENACAO_SES });
+    expect(payload).toMatchObject({
+      sub: 'u1',
+      perfil: Perfil.COORDENACAO_SES,
+      instituicao: 'SES-MA',
+    });
   });
 
   it('recusa senha errada', async () => {
@@ -82,6 +86,20 @@ describe('AuthService.refresh', () => {
     });
     await expect(jwt.verifyAsync(tokens.refreshToken, { secret: REFRESH })).resolves.toMatchObject({
       sub: 'u1',
+    });
+  });
+
+  it('renova a instituição do usuário no token novo (escopo ABAC)', async () => {
+    const { jwt, service } = await montar();
+    const refreshToken = await jwt.signAsync(
+      { sub: 'u1', perfil: Perfil.COORDENACAO_SES, instituicao: 'antiga' },
+      { secret: REFRESH },
+    );
+
+    const tokens = await service.refresh({ refreshToken });
+
+    await expect(jwt.verifyAsync(tokens.accessToken, { secret: ACCESS })).resolves.toMatchObject({
+      instituicao: 'SES-MA',
     });
   });
 

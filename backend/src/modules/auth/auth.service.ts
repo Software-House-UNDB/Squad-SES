@@ -38,7 +38,11 @@ export class AuthService {
       throw new UnauthorizedException('E-mail ou senha inválidos');
     }
 
-    const tokens = await this.gerarTokens({ sub: usuario.id, perfil: usuario.perfil });
+    const tokens = await this.gerarTokens({
+      sub: usuario.id,
+      perfil: usuario.perfil,
+      instituicao: usuario.instituicao,
+    });
     return {
       ...tokens,
       // Nunca devolver o senhaHash: só os campos que o frontend usa.
@@ -61,11 +65,15 @@ export class AuthService {
     // Relê o usuário: se ele foi removido ou mudou de perfil, isso já vale no token novo.
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: payload.sub },
-      select: { id: true, perfil: true },
+      select: { id: true, perfil: true, instituicao: true },
     });
     if (!usuario) throw new UnauthorizedException(SESSAO_EXPIRADA);
 
-    return this.gerarTokens({ sub: usuario.id, perfil: usuario.perfil });
+    return this.gerarTokens({
+      sub: usuario.id,
+      perfil: usuario.perfil,
+      instituicao: usuario.instituicao,
+    });
   }
 
   // Os dois tokens levam o mesmo conteúdo, mas são assinados com segredos diferentes:
