@@ -1,7 +1,9 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  IsEmail,
   IsEnum,
+  IsNotEmpty,
   IsInt,
   IsOptional,
   IsString,
@@ -12,10 +14,31 @@ import {
 } from 'class-validator';
 import { StatusProcesso, TipoEstagio } from '../../../generated/prisma/enums.js';
 
+const aparar = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim() : value;
+const emailNormalizado = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : value;
+
 export class CriarProcessoDto {
   @IsOptional()
   @IsEnum(TipoEstagio, { message: 'tipoEstagio inválido' })
   tipoEstagio?: TipoEstagio;
+
+  // Supervisor do campo de estágio, que assina o TCE por link (RF-04).
+  // Opcional aqui; obrigatório antes do envio para assinatura.
+  @ApiPropertyOptional({ example: 'Maria Souza' })
+  @IsOptional()
+  @Transform(aparar)
+  @IsString({ message: 'supervisorNome inválido' })
+  @IsNotEmpty({ message: 'supervisorNome inválido' })
+  @MaxLength(200, { message: 'supervisorNome passa de 200 caracteres' })
+  supervisorNome?: string;
+
+  @ApiPropertyOptional({ example: 'maria.souza@saude.ma.gov.br' })
+  @IsOptional()
+  @Transform(emailNormalizado)
+  @IsEmail({}, { message: 'supervisorEmail inválido' })
+  supervisorEmail?: string;
 }
 
 export class AtualizarProcessoDto extends PartialType(CriarProcessoDto) {}

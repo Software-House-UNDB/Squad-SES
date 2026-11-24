@@ -50,6 +50,35 @@ enum TipoDocumento {
   @@map("tipo_documento")
 }
 
+// Quem precisa assinar um documento (escopo P0: TCE e declarações).
+// A Coordenação SES não assina.
+enum PapelSignatario {
+  REPRESENTANTE_UNDB
+  SUPERVISOR
+  DIRETOR_ESP
+  ESTAGIARIO
+
+  @@map("papel_signatario")
+}
+
+// SENHA: representante da UNDB, logado (RF-02).
+// OTP: link único por e-mail + código de 6 dígitos (RF-04).
+enum MetodoAssinatura {
+  SENHA
+  OTP
+
+  @@map("metodo_assinatura")
+}
+
+// Lei 14.063/2020, art. 4º. O MVP só usa SIMPLES.
+enum NivelAssinatura {
+  SIMPLES
+  AVANCADA
+  QUALIFICADA
+
+  @@map("nivel_assinatura")
+}
+
 model Usuario {
   id           String      @id @default(uuid()) @db.Uuid
   nome         String
@@ -62,6 +91,7 @@ model Usuario {
   processos    Processo[]
   documentos   Documento[]
   auditorias   Auditoria[]
+  signatarios  Signatario[]
 
   @@map("usuarios")
 }
@@ -71,6 +101,10 @@ model Processo {
   tipoEstagio       TipoEstagio?   @map("tipo_estagio")
   status            StatusProcesso @default(rascunho)
   observacaoAnalise String?        @map("observacao_analise")
+  // Supervisor do campo de estágio. Opcionais no banco; obrigatórios antes
+  // do envio para assinatura (regra na aplicação).
+  supervisorNome    String?        @map("supervisor_nome")
+  supervisorEmail   String?        @map("supervisor_email")
   criadoPorId       String         @map("criado_por_id") @db.Uuid
   criadoPor         Usuario        @relation(fields: [criadoPorId], references: [id], onDelete: Restrict)
   criadoEm          DateTime       @default(now()) @map("criado_em")
@@ -91,6 +125,8 @@ model Estagiario {
   cpf             String      @db.Char(11)
   matricula       String
   curso           String
+  // Opcional no banco; obrigatório antes do envio para assinatura.
+  email           String?
   menorIdade      Boolean     @default(false) @map("menor_idade")
   responsavelNome String?     @map("responsavel_nome")
   cidade          String?
@@ -107,6 +143,7 @@ model Estagiario {
   criadoEm        DateTime    @default(now()) @map("criado_em")
   atualizadoEm    DateTime    @updatedAt @map("atualizado_em")
   documentos      Documento[]
+  signatarios     Signatario[]
 
   @@unique([processoId, cpf])
   @@unique([processoId, matricula])
@@ -128,6 +165,8 @@ model Documento {
   enviadoPorId String        @map("enviado_por_id") @db.Uuid
   enviadoPor   Usuario       @relation(fields: [enviadoPorId], references: [id], onDelete: Restrict)
   criadoEm     DateTime      @default(now()) @map("criado_em")
+  signatarios  Signatario[]
+  assinaturas  Assinatura[]
 
   // Mesmo PDF duas vezes no mesmo processo é reenvio. O índice também atende
   // às buscas por processo_id, por isso substitui o @@index([processoId]).
@@ -153,4 +192,64 @@ model Auditoria {
   @@index([usuarioId])
   @@index([criadoEm])
   @@map("auditoria")
+}
+
+// Uma linha por pessoa que precisa assinar o documento. Nome e e-mail são
+// copiados no momento do envio, para a evidência não mudar se o cadastro mudar.
+model Signatario {
+  id           String          @id @default(uuid()) @db.Uuid
+  documentoId  String          @map("documento_id") @db.Uuid
+  documento    Documento       @relation(fields: [documentoId], references: [id], onDelete: Restrict)
+  papel        PapelSignatario
+  nome         String
+  email        String
+  // REPRESENTANTE_UNDB assina logado: aponta para o usuário.
+  usuarioId    String?         @map("usuario_id") @db.Uuid
+  usuario      Usuario?        @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  // ESTAGIARIO: aponta para o cadastro do estagiário.
+  estagiarioId String?         @map("estagiario_id") @db.Uuid
+  estagiario   Estagiario?     @relation(fields: [estagiarioId], references: [id], onDelete: Restrict)
+
+  // Link único (RF-04). Só o hash SHA-256 do token fica no banco.
+  // Reenviar o link troca o hash, o que invalida o link anterior.
+  tokenHash     String?   @unique @map("token_hash") @db.Char(64)
+  tokenExpiraEm DateTime? @map("token_expira_em") @db.Timestamptz(3)
+  linkEnviadoEm DateTime? @map("link_enviado_em") @db.Timestamptz(3)
+
+  // OTP de 6 dígitos enviado ao mesmo e-mail. Só o hash fica no banco.
+  otpHash       String?   @map("otp_hash")
+  otpExpiraEm   DateTime? @map("otp_expira_em") @db.Timestamptz(3)
+  otpTentativas Int       @default(0) @map("otp_tentativas")
+
+  criadoEm     DateTime    @default(now()) @map("criado_em")
+  atualizadoEm DateTime    @updatedAt @map("atualizado_em")
+  assinatura   Assinatura?
+
+  @@unique([documentoId, papel])
+  @@index([usuarioId])
+  @@index([estagiarioId])
+  @@map("signatarios")
+}
+
+// Evidências do ato de assinar (RF-15, seção 8). Append-only: um trigger
+// recusa UPDATE, DELETE e TRUNCATE, como na auditoria.
+model Assinatura {
+  id           String           @id @default(uuid()) @db.Uuid
+  signatarioId String           @unique @map("signatario_id") @db.Uuid
+  signatario   Signatario       @relation(fields: [signatarioId], references: [id], onDelete: Restrict)
+  documentoId  String           @map("documento_id") @db.Uuid
+  documento    Documento        @relation(fields: [documentoId], references: [id], onDelete: Restrict)
+  // Hash do PDF calculado no ato da assinatura, não reaproveitado do upload.
+  hashSha256   String           @map("hash_sha256") @db.Char(64)
+  metodo       MetodoAssinatura
+  nivel        NivelAssinatura  @default(SIMPLES)
+  // Aceite explícito ("Li e concordo"). O CHECK no banco exige true.
+  aceite       Boolean
+  ip           String
+  userAgent    String           @map("user_agent")
+  // Timestamp do servidor, em UTC.
+  assinadoEm   DateTime         @default(now()) @map("assinado_em") @db.Timestamptz(3)
+
+  @@index([documentoId])
+  @@map("assinaturas")
 }
