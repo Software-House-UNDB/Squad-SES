@@ -109,7 +109,8 @@
   color: var(--color-text);
 }
 
-.np-field input {
+.np-field input,
+.np-field select {
   height: 40px;
   padding: 0 12px;
   border-radius: var(--radius-sm);
@@ -130,17 +131,20 @@
   color: #8f8ea3;
 }
 
-.np-field input:focus {
+.np-field input:focus,
+.np-field select:focus {
   border-color: var(--color-primary);
   background: #fff;
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
-.np-field input[aria-invalid='true'] {
+.np-field input[aria-invalid='true'],
+.np-field select[aria-invalid='true'] {
   border-color: var(--color-danger);
 }
 
-.np-field input[aria-invalid='true']:focus {
+.np-field input[aria-invalid='true']:focus,
+.np-field select[aria-invalid='true']:focus {
   box-shadow: 0 0 0 3px rgba(224, 36, 94, 0.14);
 }
 
@@ -678,4 +682,68 @@
   min-width: 3ch;
   font-size: 0.8125rem;
   text-align: right;
+}
+
+/* Dados do TCE e do processo */
+.np-tce {
+  margin: 0;
+  padding: 16px 0 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  min-width: 0;
+}
+
+.np-tce__titulo {
+  padding: 0 8px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.np-field__rotulo {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.np-field__ajuda {
+  font-size: 12px;
+  color: #6b6a80;
+}
+
+.np-dias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.np-dia {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: #fbfbfd;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.np-dia input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.np-dia--on {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.np-dia:focus-within {
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }

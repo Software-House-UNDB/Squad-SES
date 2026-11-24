@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearSession } from '../../auth/session.ts';
@@ -40,6 +40,32 @@ async function preencher(nome: string, cpf: string, matricula: string, curso = '
   await colar(screen.getByLabelText('CPF'), cpf);
   await colar(screen.getByLabelText('Matrícula'), matricula);
   await colar(screen.getByLabelText('Curso'), curso);
+  await preencherTce(cpf);
+}
+
+// Dados do TCE: o e-mail sai do CPF para ser único no lote.
+async function preencherTce(cpf: string) {
+  await colar(screen.getByLabelText('E-mail do estagiário'), `aluno${cpf}@teste.com`);
+  await colar(screen.getByLabelText('Período do curso'), '5');
+  await colar(screen.getByLabelText('Horas por dia'), '6');
+  fireEvent.change(screen.getByLabelText('Início do estágio'), { target: { value: '2026-12-01' } });
+  fireEvent.change(screen.getByLabelText('Término do estágio'), {
+    target: { value: '2027-06-30' },
+  });
+  fireEvent.change(screen.getByLabelText('Horário de início'), { target: { value: '08:00' } });
+  fireEvent.change(screen.getByLabelText('Horário de fim'), { target: { value: '14:00' } });
+  await userEvent.click(screen.getByLabelText('Seg'));
+  await userEvent.click(screen.getByLabelText('Qua'));
+  await colar(screen.getByLabelText('Cidade'), 'São Luís');
+  await userEvent.selectOptions(screen.getByLabelText('UF'), 'MA');
+  await colar(screen.getByLabelText('CEP'), '65000000');
+}
+
+// Dados do processo: tipo de estágio e supervisor.
+async function preencherProcesso() {
+  await userEvent.selectOptions(screen.getByLabelText('Tipo de estágio'), 'obrigatorio');
+  await colar(screen.getByLabelText('Nome do supervisor'), 'Maria Supervisora');
+  await colar(screen.getByLabelText('E-mail do supervisor'), 'maria@saude.ma.gov.br');
 }
 
 const adicionarAoLote = () =>
@@ -61,8 +87,9 @@ async function anexar(rotulo: string, arquivo: File = pdf()) {
   await waitFor(() => expect(screen.queryAllByText(arquivo.name).length).toBeGreaterThan(antes));
 }
 
-/** Anexa todo o pacote de um lote com um estagiário maior de idade (Ana). */
+/** Preenche os dados do processo e anexa todo o pacote de um lote com um estagiário maior de idade (Ana). */
 async function completarPacoteDeUmEstagiario() {
+  await preencherProcesso();
   for (const rotulo of [
     'Plano de atividades',
     'Apólice de seguro',
@@ -89,7 +116,9 @@ describe('Novo processo de documentação', () => {
       expect(screen.getByText('0 no lote')).toBeInTheDocument();
       expect(botaoEnviar()).toBeDisabled();
       expect(screen.getByText('Adicione ao menos um estagiário.')).toBeInTheDocument();
-      expect(screen.getByText('Plano de atividades', { selector: '.np-pendencias li' })).toBeInTheDocument();
+      expect(
+        screen.getByText('Plano de atividades', { selector: '.np-pendencias li' }),
+      ).toBeInTheDocument();
     });
 
     it('liga o botão de enviar à lista de pendências (leitor de tela)', () => {
@@ -105,10 +134,25 @@ describe('Novo processo de documentação', () => {
       expect(screen.queryByLabelText(/Anexar TCE/)).not.toBeInTheDocument();
     });
 
-    it('não mostra campos que não existem no projeto (ofício, tipo de estágio, endereço)', () => {
+    it('não mostra o campo de ofício, que não existe no projeto', () => {
       abrir();
-      for (const texto of [/ofício/i, /tipo de estágio/i, /CEP/, /Cidade/]) {
-        expect(screen.queryByText(texto)).not.toBeInTheDocument();
+      expect(screen.queryByText(/ofício/i)).not.toBeInTheDocument();
+    });
+
+    it('pede os dados do processo e do TCE (tipo de estágio, supervisor, endereço, horário)', () => {
+      abrir();
+      for (const rotulo of [
+        'Tipo de estágio',
+        'Nome do supervisor',
+        'E-mail do supervisor',
+        'E-mail do estagiário',
+        'Início do estágio',
+        'Horário de início',
+        'Cidade',
+        'UF',
+        'CEP',
+      ]) {
+        expect(screen.getByLabelText(rotulo)).toBeInTheDocument();
       }
     });
 
@@ -220,7 +264,9 @@ describe('Novo processo de documentação', () => {
       await anexar('Plano de atividades');
       expect(screen.getByText('doc.pdf')).toBeInTheDocument();
       expect(screen.getAllByText('1 de 3').length).toBeGreaterThan(0);
-      expect(screen.queryByText('Plano de atividades', { selector: '.np-pendencias li' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Plano de atividades', { selector: '.np-pendencias li' }),
+      ).not.toBeInTheDocument();
 
       await userEvent.click(screen.getByRole('button', { name: 'Remover Plano de atividades' }));
       expect(screen.queryByText('doc.pdf')).not.toBeInTheDocument();
@@ -281,8 +327,69 @@ describe('Novo processo de documentação', () => {
       await adicionar(ANA);
       await adicionar(BIA);
       await adicionar(CAIO);
-      // plano, apólice, lista + 3 documentos pessoais = 6; mostra 4 e resume o resto
-      expect(screen.getByText('e mais 2 item(ns)')).toBeInTheDocument();
+      // 3 dados do processo + plano, apólice, lista + 3 documentos pessoais = 9; mostra 4 e resume o resto
+      expect(screen.getByText('e mais 5 item(ns)')).toBeInTheDocument();
+    });
+  });
+
+  describe('dados do TCE e do processo', () => {
+    it('não deixa adicionar o estagiário sem os dados do TCE e foca o primeiro campo com erro', async () => {
+      abrir();
+      await colar(screen.getByLabelText('Nome completo'), 'Ana Souza');
+      await colar(screen.getByLabelText('CPF'), ANA[1]);
+      await colar(screen.getByLabelText('Matrícula'), ANA[2]);
+      await colar(screen.getByLabelText('Curso'), 'Enfermagem');
+      await adicionarAoLote();
+
+      expect(screen.getByText('0 no lote')).toBeInTheDocument();
+      expect(screen.getByText('Informe o e-mail do estagiário.')).toBeInTheDocument();
+      expect(screen.getByText('Marque ao menos um dia da semana.')).toBeInTheDocument();
+      expect(screen.getByLabelText('E-mail do estagiário')).toHaveFocus();
+    });
+
+    it('mostra e-mail, período, horário e cidade do estagiário na lista', async () => {
+      abrir();
+      await adicionar(ANA);
+
+      expect(screen.getByText(/aluno52998224725@teste\.com/)).toBeInTheDocument();
+      expect(screen.getByText(/01\/12\/2026 a 30\/06\/2027/)).toBeInTheDocument();
+      expect(screen.getByText(/08:00–14:00 · São Luís\/MA/)).toBeInTheDocument();
+    });
+
+    it('barra e-mail repetido no lote', async () => {
+      abrir();
+      await adicionar(ANA);
+      await preencher('Outra Pessoa', BIA[1], BIA[2]);
+      await colar(screen.getByLabelText('E-mail do estagiário'), 'x');
+      await userEvent.clear(screen.getByLabelText('E-mail do estagiário'));
+      await colar(screen.getByLabelText('E-mail do estagiário'), `aluno${ANA[1]}@teste.com`);
+      await adicionarAoLote();
+
+      expect(screen.getByText(/Este e-mail já está neste processo/)).toBeInTheDocument();
+    });
+
+    it('formata o CEP enquanto digita', async () => {
+      abrir();
+      await colar(screen.getByLabelText('CEP'), '65000000');
+      expect(screen.getByLabelText('CEP')).toHaveValue('65000-000');
+    });
+
+    it('o envio fica bloqueado até preencher o tipo de estágio e o supervisor', async () => {
+      abrir();
+      await adicionar(ANA);
+      for (const rotulo of [
+        'Plano de atividades',
+        'Apólice de seguro',
+        'Lista oficial de indicados',
+        'Documentos pessoais',
+      ]) {
+        await anexar(rotulo);
+      }
+      expect(botaoEnviar()).toBeDisabled();
+      expect(screen.getByText('Escolha o tipo de estágio.')).toBeInTheDocument();
+
+      await preencherProcesso();
+      expect(botaoEnviar()).toBeEnabled();
     });
   });
 
@@ -385,7 +492,9 @@ describe('Novo processo de documentação', () => {
       await adicionar(ANA);
       await completarPacoteDeUmEstagiario();
       await userEvent.click(botaoEnviar());
-      expect(await screen.findByRole('alert')).toHaveTextContent(/já foi anexado em outro documento/);
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        /já foi anexado em outro documento/,
+      );
       expect(botaoEnviar()).toBeEnabled();
     });
 
