@@ -1,11 +1,9 @@
 import StatusProcessoBadge from '../../components/ui/StatusProcessoBadge.tsx';
 import type { ProcessoResumo } from '../../data/mockProcessos.ts';
+import { formatarData } from '../../lib/data.ts';
 import './processos.css';
 
 const COLUNAS = ['N° do processo', 'Autor', 'Status', 'Estagiários', 'Enviado em', 'Concluído em'];
-
-const formatarData = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' }) : '—';
 
 export default function ProcessosTable({ processos }: { processos: ProcessoResumo[] }) {
   if (processos.length === 0) {

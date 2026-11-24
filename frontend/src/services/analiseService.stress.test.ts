@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ProcessoAnalise, StatusProcesso } from '../pages/AnaliseProcesso/analise.ts';
+import type { ProcessoAnalise } from '../pages/AnaliseProcesso/analise.ts';
+import type { StatusProcesso } from '../domain/processo.ts';
 import { agruparDocumentos } from '../pages/AnaliseProcesso/analise.ts';
 import {
   buscarProcessoParaAnalise,

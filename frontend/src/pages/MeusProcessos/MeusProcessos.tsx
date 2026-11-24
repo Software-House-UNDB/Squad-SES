@@ -4,7 +4,8 @@ import { FolderOpen, LoaderCircle } from 'lucide-react';
 import PageHeader from '../../components/layout/PageHeader.tsx';
 import Badge from '../../components/ui/Badge.tsx';
 import { listarMeusProcessos } from '../../services/analiseService.ts';
-import { formatarData, STATUS_BADGE, STATUS_LABEL } from '../AnaliseProcesso/analise.ts';
+import { formatarData } from '../AnaliseProcesso/analise.ts';
+import { STATUS_PROCESSO_LABEL, STATUS_PROCESSO_VARIANT } from '../../domain/processo.ts';
 import '../AnaliseProcesso/analiseProcesso.css';
 import './meusProcessos.css';
 
@@ -88,7 +89,7 @@ export default function MeusProcessos() {
                     <tr key={p.id}>
                       <th scope="row">{p.numero}</th>
                       <td>
-                        <Badge variant={STATUS_BADGE[p.status]}>{STATUS_LABEL[p.status]}</Badge>
+                        <Badge variant={STATUS_PROCESSO_VARIANT[p.status]}>{STATUS_PROCESSO_LABEL[p.status]}</Badge>
                       </td>
                       <td>{formatarData(p.enviadoEm)}</td>
                       <td>
