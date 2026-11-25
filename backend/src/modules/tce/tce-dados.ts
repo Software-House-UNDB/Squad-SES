@@ -55,6 +55,8 @@ export type EstagiarioParaTce = Pick<
   | 'diasSemana'
   | 'horarioInicio'
   | 'horarioFim'
+  | 'menorIdade'
+  | 'responsavelNome'
 >;
 
 export type ProcessoParaTce = {
@@ -99,6 +101,14 @@ export function pendenciasTce(processo: ProcessoParaTce): PendenciaTce[] {
         estagiarioId: estagiario.id,
       });
     }
+    // Menor de idade: o TCE identifica o responsável pelo nome (#80, RF-13).
+    if (estagiario.menorIdade && !estagiario.responsavelNome?.trim()) {
+      pendencias.push({
+        campo: 'responsavelNome',
+        motivo: 'nome do responsável não informado (menor de idade)',
+        estagiarioId: estagiario.id,
+      });
+    }
     // Teto legal da jornada (#79): cadastro antigo ou gravado antes da regra
     // não gera TCE acima de 6 h/dia ou 30 h/semana.
     for (const { motivo } of problemasJornada(estagiario)) {
@@ -135,6 +145,10 @@ export type DadosTce = {
   cidade: string;
   uf: string;
   cep: string;
+  // Menor de idade (#80): o responsável aparece junto aos dados do estagiário.
+  // Ele não assina no MVP; a redação é validada na homologação com a SES.
+  is_menor: boolean;
+  responsavel_nome: string;
   is_obrigatorio: boolean;
   is_pos_graduacao: boolean;
   data_inicio: string;
@@ -178,6 +192,9 @@ export function montarDadosTce(
     cidade: estagiario.cidade!,
     uf: estagiario.uf!,
     cep: formatarCep(estagiario.cep!),
+    is_menor: estagiario.menorIdade,
+    // Sempre presente: o template compila em strict, e campo ausente é erro.
+    responsavel_nome: estagiario.menorIdade ? estagiario.responsavelNome!.trim() : '',
     is_obrigatorio: processo.tipoEstagio === TipoEstagio.obrigatorio,
     is_pos_graduacao: processo.tipoEstagio === TipoEstagio.pos_graduacao,
     data_inicio: formatarData(estagiario.dataInicio!),

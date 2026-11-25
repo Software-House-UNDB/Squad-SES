@@ -31,6 +31,8 @@ export function estagiarioCompleto(extra: Partial<EstagiarioParaTce> = {}): Esta
     diasSemana: ['seg', 'ter', 'qua', 'qui', 'sex'],
     horarioInicio: '07:00',
     horarioFim: '13:00',
+    menorIdade: false,
+    responsavelNome: null,
     ...extra,
   };
 }

@@ -29,6 +29,23 @@ describe('RenderizadorPdfService.montarHtml', () => {
     expect(html).toMatch(/\(\s*\) Pós-Graduação;/);
   });
 
+  it('maior de idade: nenhuma menção a responsável', async () => {
+    const html = await renderizador.montarHtml(dados());
+
+    expect(html).not.toContain('responsável legal');
+    expect(html).toMatch(/CEP: 65000-000\s*<\/p>/);
+  });
+
+  it('menor de idade: identifica o responsável junto aos dados do estagiário', async () => {
+    const html = await renderizador.montarHtml(
+      dados({ menorIdade: true, responsavelNome: 'Maria Souza' }),
+    );
+
+    expect(html.replace(/\s+/g, ' ')).toContain(
+      'CEP: 65000-000, menor de idade, assistido (a) por seu (sua) responsável legal, Maria Souza',
+    );
+  });
+
   it('embute imagens e a fonte serifada, sem caminho relativo', async () => {
     const html = await renderizador.montarHtml(dados());
 
