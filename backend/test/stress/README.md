@@ -13,3 +13,19 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ses_stress node backe
 ```
 
 Sai com código 1 se qualquer verificação falhar. Parâmetros: `STRESS_UPLOADS`, `STRESS_CORRIDA`, `STRESS_CONCORRENCIA`.
+
+## Comentários por documento (RF-12)
+
+`comentarios.stress.mjs` cobre a matriz perfil × tipo × status, isolamento entre representantes,
+ataques de autenticação, a corrida entre comentar e apagar o documento, a troca de status em
+andamento (lock), um pico maior que o pool de conexões, entradas hostis e a integridade do banco.
+Não precisa de bucket: os documentos são inseridos direto no banco. O banco tem que ser **UTF-8**
+(o do `docker-compose` já é).
+
+```bash
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ses_stress \
+JWT_ACCESS_SECRET=<o mesmo da API> node backend/test/stress/comentarios.stress.mjs
+```
+
+Parâmetros: `SEED_SENHA`, `STRESS_API`, `STRESS_COMENTARIOS`, `STRESS_CORRIDA_DOCUMENTOS`,
+`STRESS_PICO`, `STRESS_CONCORRENCIA`. Sem `JWT_ACCESS_SECRET`, os ataques com JWT forjado são pulados.
