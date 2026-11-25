@@ -18,6 +18,8 @@ const COMENTARIO = {
   id: true,
   processoId: true,
   documentoId: true,
+  documentoTipo: true,
+  documentoNomeArquivo: true,
   tipo: true,
   texto: true,
   criadoEm: true,
@@ -71,7 +73,7 @@ export class ComentariosService {
           // é aprovado. Comentários simultâneos não se bloqueiam (lock compartilhado).
           const status = await this.travarStatus(tx, processoId);
           exigirPodeComentar(usuario.perfil, dto.tipo, status);
-          await this.garantirDocumento(tx, processoId, documentoId);
+          const documento = await this.garantirDocumento(tx, processoId, documentoId);
 
           const comentario = await tx.comentario.create({
             data: {
@@ -80,6 +82,8 @@ export class ComentariosService {
               autorId: usuario.id,
               tipo: dto.tipo,
               texto: dto.texto,
+              documentoTipo: documento.tipo,
+              documentoNomeArquivo: documento.nomeArquivo,
             },
             select: COMENTARIO,
           });
@@ -143,8 +147,9 @@ export class ComentariosService {
   ) {
     const documento = await cliente.documento.findFirst({
       where: { id: documentoId, processoId },
-      select: { id: true },
+      select: { id: true, tipo: true, nomeArquivo: true },
     });
     if (!documento) throw new NotFoundException(MENSAGEM_SEM_DOCUMENTO);
+    return documento;
   }
 }

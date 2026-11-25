@@ -191,8 +191,9 @@ model Documento {
   @@map("documentos")
 }
 
-// Conversa da análise sobre um documento do processo (RF-12). Só se cria: não há
-// edição nem exclusão, porque o comentário é parte do histórico da análise.
+// Conversa da análise sobre um documento do processo (RF-12). A API só cria: não há
+// edição nem exclusão, porque o comentário é parte do histórico da análise. A única
+// alteração é do banco: documento_id vira nulo quando o documento é removido.
 model Comentario {
   id          String         @id @default(uuid()) @db.Uuid
   processoId  String         @map("processo_id") @db.Uuid
@@ -201,6 +202,10 @@ model Comentario {
   // fica nulo e o comentário segue como histórico do processo.
   documentoId String?        @map("documento_id") @db.Uuid
   documento   Documento?     @relation(fields: [documentoId], references: [id], onDelete: SetNull)
+  // Cópia do documento no momento do comentário: depois que ele é substituído
+  // (removido e reenviado na correção), o comentário ainda diz a que documento se referia.
+  documentoTipo        TipoDocumento? @map("documento_tipo")
+  documentoNomeArquivo String?        @map("documento_nome_arquivo")
   autorId     String         @map("autor_id") @db.Uuid
   autor       Usuario        @relation(fields: [autorId], references: [id], onDelete: Restrict)
   tipo        TipoComentario

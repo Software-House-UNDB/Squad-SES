@@ -321,6 +321,10 @@ try {
   checar(orfaos[0].n === 0, 'sem documento, o comentário fica com documento_id nulo (histórico do processo)');
   const doProc = await chamar('GET', doProcesso(procCorrida), { token: coord });
   checar(doProc.status === 200 && doProc.corpo.length === criados, 'a lista do processo ainda mostra os comentários de documentos removidos');
+  checar(
+    doProc.corpo.every((c) => c.documentoId === null && c.documentoTipo === 'anexo' && c.documentoNomeArquivo === 'estresse.pdf'),
+    'e cada um ainda diz a que documento se referia (cópia do tipo e do nome do arquivo)',
+  );
   const audCorrida = await contarAuditoria(procCorrida);
   checar(audCorrida === criados, `auditoria bate com os comentários criados (${audCorrida})`);
 

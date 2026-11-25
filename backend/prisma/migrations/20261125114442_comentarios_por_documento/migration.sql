@@ -6,6 +6,8 @@ CREATE TABLE "comentarios" (
     "id" UUID NOT NULL,
     "processo_id" UUID NOT NULL,
     "documento_id" UUID,
+    "documento_tipo" "tipo_documento",
+    "documento_nome_arquivo" TEXT,
     "autor_id" UUID NOT NULL,
     "tipo" "tipo_comentario" NOT NULL,
     "texto" TEXT NOT NULL,

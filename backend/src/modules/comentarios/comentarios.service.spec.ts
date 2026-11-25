@@ -32,7 +32,11 @@ function comentarioGravado(data: Record<string, unknown>) {
 function montar(status: StatusProcesso = StatusProcesso.em_analise) {
   const tx = {
     $queryRaw: vi.fn().mockResolvedValue([{ status }]),
-    documento: { findFirst: vi.fn().mockResolvedValue({ id: DOCUMENTO }) },
+    documento: {
+      findFirst: vi
+        .fn()
+        .mockResolvedValue({ id: DOCUMENTO, tipo: 'apolice', nomeArquivo: 'apolice-2026.pdf' }),
+    },
     comentario: {
       create: vi.fn(({ data }) => Promise.resolve(comentarioGravado(data))),
       findMany: vi.fn().mockResolvedValue([]),
@@ -95,8 +99,12 @@ describe('ComentariosService.criar', () => {
         autorId: 'coord',
         tipo: 'pendencia',
         texto: 'CPF ilegível',
+        documentoTipo: 'apolice',
+        documentoNomeArquivo: 'apolice-2026.pdf',
       },
       select: expect.objectContaining({
+        documentoTipo: true,
+        documentoNomeArquivo: true,
         autor: { select: { id: true, nome: true, perfil: true } },
       }),
     });
@@ -169,8 +177,17 @@ describe('ComentariosService.criar', () => {
 
     expect(tx.documento.findFirst).toHaveBeenCalledWith({
       where: { id: DOCUMENTO, processoId: PROCESSO },
-      select: { id: true },
+      select: { id: true, tipo: true, nomeArquivo: true },
     });
+  });
+
+  it('a listagem traz a cópia do documento, que continua lá depois que ele é substituído', async () => {
+    const { tx, service } = montar();
+
+    await service.listarDoProcesso(PROCESSO, COORDENACAO);
+
+    const { select } = tx.comentario.findMany.mock.calls[0][0];
+    expect(select).toMatchObject({ documentoTipo: true, documentoNomeArquivo: true });
   });
 
   it('espera por uma conexão do pool mais que os 2 s padrão do Prisma, para o pico entrar na fila', async () => {
