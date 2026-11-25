@@ -1,6 +1,7 @@
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import type { Estagiario } from '../../generated/prisma/client.js';
 import { TipoEstagio } from '../../generated/prisma/enums.js';
+import { diasDistintos, problemasJornada } from '../processos/jornada.js';
 
 // Dados fixos do TCE: a SES (concedente) e a instituição de ensino do piloto.
 // Vêm do ambiente (Render), não do banco: no piloto só a UNDB participa, e o
@@ -98,6 +99,11 @@ export function pendenciasTce(processo: ProcessoParaTce): PendenciaTce[] {
         estagiarioId: estagiario.id,
       });
     }
+    // Teto legal da jornada (#79): cadastro antigo ou gravado antes da regra
+    // não gera TCE acima de 6 h/dia ou 30 h/semana.
+    for (const { motivo } of problemasJornada(estagiario)) {
+      pendencias.push({ campo: 'horasPorDia', motivo, estagiarioId: estagiario.id });
+    }
   }
   return pendencias;
 }
@@ -178,7 +184,7 @@ export function montarDadosTce(
     data_termino: formatarData(estagiario.dataTermino!),
     horario_inicio: estagiario.horarioInicio!,
     horario_fim: estagiario.horarioFim!,
-    horas_semanais: estagiario.horasPorDia! * estagiario.diasSemana.length,
+    horas_semanais: estagiario.horasPorDia! * diasDistintos(estagiario.diasSemana),
     dia: parte({ day: '2-digit' }),
     mes: parte({ month: 'long' }),
     ano: parte({ year: 'numeric' }),

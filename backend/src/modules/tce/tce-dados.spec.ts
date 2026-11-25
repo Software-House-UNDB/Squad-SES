@@ -61,6 +61,35 @@ describe('pendenciasTce', () => {
     ]);
   });
 
+  it('estagiário acima do teto legal da jornada é pendência (#79)', () => {
+    const pendencias = pendenciasTce({
+      tipoEstagio: TipoEstagio.obrigatorio,
+      estagiarios: [
+        estagiarioCompleto(),
+        estagiarioCompleto({
+          id: 'e2',
+          horasPorDia: 8,
+          horarioInicio: '08:00',
+          horarioFim: '18:00',
+          diasSemana: ['seg', 'ter', 'qua', 'qui'],
+        }),
+      ],
+    });
+
+    expect(pendencias).toEqual([
+      {
+        campo: 'horasPorDia',
+        motivo: 'jornada acima do limite legal de 6 horas diárias',
+        estagiarioId: 'e2',
+      },
+      {
+        campo: 'horasPorDia',
+        motivo: 'jornada acima do limite legal de 30 horas semanais (32 h)',
+        estagiarioId: 'e2',
+      },
+    ]);
+  });
+
   it('processo sem estagiários é pendência', () => {
     expect(pendenciasTce({ tipoEstagio: TipoEstagio.obrigatorio, estagiarios: [] })).toEqual([
       { campo: 'estagiarios', motivo: 'processo sem estagiários' },
