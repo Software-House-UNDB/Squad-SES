@@ -11,6 +11,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { escopoProcesso } from '../auth/escopo-processo.js';
 import type { UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import { AuditoriaService } from '../auditoria/auditoria.service.js';
+import { registrosDeAcesso } from '../auditoria/acesso-estagiarios.js';
 import {
   AnalisarProcessoDto,
   AtualizarProcessoDto,
@@ -87,6 +88,8 @@ export class ProcessosService {
       include: { estagiarios: { orderBy: { nome: 'asc' } } },
     });
     if (!processo) throw new NotFoundException('Processo não encontrado');
+    // O detalhe traz o lote inteiro (CPF, e-mail...): conta como acesso a cada estagiário.
+    await this.auditoria.registrarAcesso(usuario, registrosDeAcesso(processo.estagiarios, id));
     return processo;
   }
 

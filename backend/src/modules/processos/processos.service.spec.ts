@@ -27,7 +27,7 @@ function montar(
   const prisma = {
     $transaction: (operacao: (cliente: typeof tx) => unknown) => operacao(tx),
   } as unknown as PrismaService;
-  const auditoria = { registrar: vi.fn() } as unknown as AuditoriaService;
+  const auditoria = { registrar: vi.fn(), registrarAcesso: vi.fn() } as unknown as AuditoriaService;
   return { tx, auditoria, service: new ProcessosService(prisma, auditoria) };
 }
 

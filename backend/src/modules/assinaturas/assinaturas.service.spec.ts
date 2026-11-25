@@ -117,7 +117,7 @@ function montar(config: Record<string, string | undefined> = CONFIG) {
     baixar: vi.fn().mockResolvedValue(PDF),
     urlAssinada: vi.fn().mockResolvedValue('https://storage/assinada'),
   };
-  const auditoria = { registrar: vi.fn() };
+  const auditoria = { registrar: vi.fn(), registrarAcesso: vi.fn() };
   const email = { enviar: vi.fn() };
   const service = new AssinaturasService(
     prisma as unknown as PrismaService,
@@ -898,8 +898,10 @@ describe('AssinaturasService.assinarPorLink', () => {
 });
 
 describe('AssinaturasService.urlDocumentoPorLink', () => {
+  const EVIDENCIA = { ip: '200.1.2.3', userAgent: 'Firefox/140' };
+
   it('confere o código e devolve URL temporária do PDF', async () => {
-    const { service, prisma, storage } = montar();
+    const { service, prisma, storage, auditoria } = montar();
     prisma.signatario.findUnique.mockResolvedValue(
       signatarioDoLink({
         otpHash: await hash('012345'),
@@ -907,7 +909,7 @@ describe('AssinaturasService.urlDocumentoPorLink', () => {
       }),
     );
 
-    const resposta = await service.urlDocumentoPorLink(TOKEN, '012345');
+    const resposta = await service.urlDocumentoPorLink(TOKEN, '012345', EVIDENCIA);
 
     expect(resposta.url).toBe('https://storage/assinada');
     expect(storage.urlAssinada).toHaveBeenCalledWith(
@@ -916,16 +918,31 @@ describe('AssinaturasService.urlDocumentoPorLink', () => {
       'application/pdf',
       300,
     );
+    // Download pelo link: sem usuário, com o signatário e a origem.
+    expect(auditoria.registrarAcesso).toHaveBeenCalledWith(
+      { ip: '200.1.2.3' },
+      {
+        acao: 'DOWNLOAD',
+        entidade: 'documento',
+        entidadeId: 'd1',
+        dadosDepois: {
+          signatarioId: 's1',
+          papel: PapelSignatario.SUPERVISOR,
+          userAgent: 'Firefox/140',
+        },
+      },
+    );
   });
 
   it('sem código válido não gera URL', async () => {
-    const { service, prisma, storage } = montar();
+    const { service, prisma, storage, auditoria } = montar();
     prisma.signatario.findUnique.mockResolvedValue(signatarioDoLink());
 
-    await expect(service.urlDocumentoPorLink(TOKEN, '012345')).rejects.toBeInstanceOf(
+    await expect(service.urlDocumentoPorLink(TOKEN, '012345', EVIDENCIA)).rejects.toBeInstanceOf(
       GoneException,
     );
     expect(storage.urlAssinada).not.toHaveBeenCalled();
+    expect(auditoria.registrarAcesso).not.toHaveBeenCalled();
   });
 });
 
