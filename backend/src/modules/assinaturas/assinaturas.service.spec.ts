@@ -23,7 +23,12 @@ import {
 } from './assinaturas.service.js';
 import { gerarToken, hashToken, mascararEmail } from './tokens.js';
 
-const REPRESENTANTE = { id: 'rep', perfil: Perfil.REPRESENTANTE_UNDB, ip: '10.0.0.1' };
+const REPRESENTANTE = {
+  id: 'rep',
+  perfil: Perfil.REPRESENTANTE_UNDB,
+  instituicao: 'UNDB',
+  ip: '10.0.0.1',
+};
 const COORDENACAO = { id: 'coord', perfil: Perfil.COORDENACAO_SES, ip: '10.0.0.2' };
 const CONFIG: Record<string, string> = {
   FRONTEND_URL: 'https://ses.exemplo.com/',
@@ -470,7 +475,7 @@ describe('AssinaturasService.reenviarLinksPendentes', () => {
     expect(email.enviar).toHaveBeenCalledTimes(1);
   });
 
-  it('limita o representante aos próprios processos', async () => {
+  it('limita o representante aos processos da própria instituição', async () => {
     const { service, prisma } = montar();
     prisma.processo.findFirst.mockResolvedValue(null);
 
@@ -478,7 +483,7 @@ describe('AssinaturasService.reenviarLinksPendentes', () => {
       NotFoundException,
     );
     expect(prisma.processo.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'p1', criadoPorId: 'rep' } }),
+      expect.objectContaining({ where: { id: 'p1', criadoPor: { instituicao: 'UNDB' } } }),
     );
   });
 
@@ -507,7 +512,7 @@ describe('AssinaturasService.reenviarLink', () => {
     expect(JSON.stringify(registro)).not.toMatch(/token_hash|tokenHash/);
   });
 
-  it('limita o representante aos próprios processos', async () => {
+  it('limita o representante aos processos da própria instituição', async () => {
     const { service, prisma } = montar();
     prisma.signatario.findFirst.mockResolvedValue(null);
 
@@ -516,7 +521,7 @@ describe('AssinaturasService.reenviarLink', () => {
     );
     expect(prisma.signatario.findFirst.mock.calls[0][0].where).toEqual({
       id: 's1',
-      documento: { processo: { criadoPorId: 'rep' } },
+      documento: { processo: { criadoPor: { instituicao: 'UNDB' } } },
     });
   });
 
@@ -1001,7 +1006,7 @@ describe('AssinaturasService.assinarLogado', () => {
 });
 
 describe('AssinaturasService.listarPorProcesso', () => {
-  it('aplica o escopo do representante e responde 404 fora dele', async () => {
+  it('aplica o escopo institucional do representante e responde 404 fora dele', async () => {
     const { service, prisma } = montar();
     prisma.processo.findFirst.mockResolvedValue(null);
 
@@ -1010,7 +1015,7 @@ describe('AssinaturasService.listarPorProcesso', () => {
     );
     expect(prisma.processo.findFirst.mock.calls[0][0].where).toEqual({
       id: 'p1',
-      criadoPorId: 'rep',
+      criadoPor: { instituicao: 'UNDB' },
     });
   });
 
