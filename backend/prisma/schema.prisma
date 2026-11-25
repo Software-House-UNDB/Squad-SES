@@ -219,6 +219,11 @@ model Signatario {
   tokenExpiraEm DateTime? @map("token_expira_em") @db.Timestamptz(3)
   linkEnviadoEm DateTime? @map("link_enviado_em") @db.Timestamptz(3)
 
+  // Lembrete diário de quem ainda não assinou (cron de lembretes). A data
+  // também serve de trava: duas execuções simultâneas não mandam dois e-mails.
+  lembreteEnviadoEm DateTime? @map("lembrete_enviado_em") @db.Timestamptz(3)
+  lembretesEnviados Int       @default(0) @map("lembretes_enviados")
+
   // OTP de 6 dígitos enviado ao mesmo e-mail. Só o hash fica no banco.
   otpHash       String?   @map("otp_hash")
   otpExpiraEm   DateTime? @map("otp_expira_em") @db.Timestamptz(3)

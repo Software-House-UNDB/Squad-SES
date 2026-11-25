@@ -11,6 +11,8 @@ export const ACOES_AUDITORIA = [
   'RETORNO_COORDENACAO',
   // Ato de assinar (RF-15), uma por signatário.
   'ASSINATURA',
+  // Lembrete do cron a quem ainda não assinou (sem usuário: ação do sistema).
+  'LEMBRETE',
 ] as const;
 
 export type AcaoAuditoria = (typeof ACOES_AUDITORIA)[number];
