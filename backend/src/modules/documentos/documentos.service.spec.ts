@@ -19,6 +19,7 @@ const DOCUMENTO = {
   id: 'd1',
   processoId: 'p1',
   nomeArquivo: 'termo.pdf',
+  tipo: TipoDocumento.termo_compromisso,
   mimeType: 'application/pdf',
   storageKey: 'processos/p1/chave.pdf',
   enviadoPorId: 'u1',
@@ -200,7 +201,7 @@ describe('DocumentosService.gerarUrl', () => {
       acao: 'DOWNLOAD',
       entidade: 'documento',
       entidadeId: DOCUMENTO.id,
-      dadosDepois: { processoId: 'p1', tipo: DOCUMENTO.tipo },
+      dadosDepois: { processoId: 'p1', tipo: TipoDocumento.termo_compromisso },
     });
 
     expect(processos.garantirAcesso).toHaveBeenCalledWith('p1', USUARIO);
