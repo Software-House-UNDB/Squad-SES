@@ -54,7 +54,9 @@ beforeEach(() => {
   servico.listarDoProcesso.mockReset().mockResolvedValue([COMENTARIO]);
 });
 
-const token = (perfil: Perfil = Perfil.COORDENACAO_SES, sub = 'u1') => jwt.sign({ sub, perfil });
+// A instituição vai no token desde o ABAC (#74); a coordenação não tem.
+const token = (perfil: Perfil = Perfil.COORDENACAO_SES, sub = 'u1', instituicao?: string) =>
+  jwt.sign({ sub, perfil, ...(instituicao ? { instituicao } : {}) });
 
 function chamar(
   metodo: string,
@@ -89,7 +91,7 @@ describe('POST /processos/:processoId/documentos/:documentoId/comentarios', () =
       PROCESSO,
       DOCUMENTO,
       { tipo: 'pendencia', texto: 'CPF ilegível' },
-      { id: 'coord-1', perfil: Perfil.COORDENACAO_SES, ip: expect.any(String) },
+      { id: 'coord-1', perfil: Perfil.COORDENACAO_SES, instituicao: null, ip: expect.any(String) },
     );
   });
 
@@ -192,7 +194,7 @@ describe('POST /processos/:processoId/documentos/:documentoId/comentarios', () =
 describe('GET /processos/:processoId/documentos/:documentoId/comentarios', () => {
   it('lista os comentários do documento', async () => {
     const resposta = await chamar('GET', DO_DOCUMENTO, {
-      bearer: token(Perfil.REPRESENTANTE_UNDB, 'rep-1'),
+      bearer: token(Perfil.REPRESENTANTE_UNDB, 'rep-1', 'UNDB'),
     });
 
     expect(resposta.status).toBe(200);
@@ -200,6 +202,7 @@ describe('GET /processos/:processoId/documentos/:documentoId/comentarios', () =>
     expect(servico.listarDoDocumento).toHaveBeenCalledExactlyOnceWith(PROCESSO, DOCUMENTO, {
       id: 'rep-1',
       perfil: Perfil.REPRESENTANTE_UNDB,
+      instituicao: 'UNDB',
       ip: expect.any(String),
     });
   });
@@ -231,6 +234,7 @@ describe('GET /processos/:processoId/comentarios', () => {
     expect(servico.listarDoProcesso).toHaveBeenCalledExactlyOnceWith(PROCESSO, {
       id: 'u1',
       perfil: Perfil.COORDENACAO_SES,
+      instituicao: null,
       ip: expect.any(String),
     });
   });

@@ -96,14 +96,20 @@ try {
     "SELECT id FROM usuarios WHERE email = 'representante@undb.edu.br'",
   );
   const repId = usuarios[0].id;
-  // Segundo representante (mesma senha do seed), para os testes de isolamento.
-  await banco.query(
-    `INSERT INTO usuarios (id, nome, email, senha_hash, perfil, instituicao, atualizado_em)
-     SELECT gen_random_uuid(), 'Representante 2 (estresse)', 'rep2@undb.edu.br', senha_hash, perfil, instituicao, now()
-       FROM usuarios WHERE email = 'representante@undb.edu.br'
-     ON CONFLICT (email) DO NOTHING`,
-  );
-  const rep2 = await login('rep2@undb.edu.br');
+  // Mais dois representantes (mesma senha do seed). Pelo escopo institucional (#74), o de
+  // outra instituição não enxerga os processos da UNDB; o colega da UNDB enxerga (RF-03).
+  const novoRepresentante = (nome, email, instituicao) =>
+    banco.query(
+      `INSERT INTO usuarios (id, nome, email, senha_hash, perfil, instituicao, atualizado_em)
+       SELECT gen_random_uuid(), $1, $2, senha_hash, perfil, $3, now()
+         FROM usuarios WHERE email = 'representante@undb.edu.br'
+       ON CONFLICT (email) DO NOTHING`,
+      [nome, email, instituicao],
+    );
+  await novoRepresentante('Representante de outra IES (estresse)', 'rep2@outra-ies.edu.br', 'OUTRA IES');
+  await novoRepresentante('Colega da UNDB (estresse)', 'colega@undb.edu.br', 'UNDB');
+  const rep2 = await login('rep2@outra-ies.edu.br');
+  const colega = await login('colega@undb.edu.br');
 
   async function novoProcesso(status, token = rep) {
     const { status: http, corpo } = await chamar('POST', '/processos', { token, json: {} });
@@ -273,12 +279,14 @@ try {
     checar((await comentar(segredoErrado, procA, docA, 'pendencia', 'x')).status === 401, 'token assinado com outro segredo: 401');
     const semAlgoritmo = `${b64({ alg: 'none', typ: 'JWT' })}.${b64({ sub: repId, perfil: 'COORDENACAO_SES' })}.`;
     checar((await comentar(semAlgoritmo, procA, docA, 'pendencia', 'x')).status === 401, 'token com alg "none": 401');
-    const comoRep = jwt({ sub: repId, perfil: 'REPRESENTANTE_UNDB', iat: agora, exp: agora + 300 });
+    const comoRep = jwt({ sub: repId, perfil: 'REPRESENTANTE_UNDB', instituicao: 'UNDB', iat: agora, exp: agora + 300 });
     checar((await comentar(comoRep, procA, docA, 'pendencia', 'x')).status === 403, 'representante não escreve pendência mesmo com token legítimo: 403');
     checar((await contarComentarios(procA)) === 2, 'nenhum ataque de autenticação gravou comentário');
   } else {
     console.log('      (JWT_ACCESS_SECRET ausente: ataques com JWT forjado ignorados)');
   }
+  const doColega = await comentar(colega, procA, docA, 'resposta', 'respondo pelo colega da mesma IES');
+  checar(doColega.status === 201, `colega da mesma instituição responde no processo do outro (RF-03): 201 (${doColega.status})`);
 
   // --- 5. Corrida: comentar enquanto o representante apaga o mesmo documento -----------------------------------
   console.log(`\n5. Corrida: ${N_DOCUMENTOS_CORRIDA} documentos apagados enquanto a coordenação comenta neles`);
