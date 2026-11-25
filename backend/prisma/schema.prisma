@@ -79,6 +79,15 @@ enum NivelAssinatura {
   @@map("nivel_assinatura")
 }
 
+// pendencia e observacao: coordenação SES. resposta: representante da UNDB (RF-12).
+enum TipoComentario {
+  pendencia
+  observacao
+  resposta
+
+  @@map("tipo_comentario")
+}
+
 model Usuario {
   id           String      @id @default(uuid()) @db.Uuid
   nome         String
@@ -92,6 +101,7 @@ model Usuario {
   documentos   Documento[]
   auditorias   Auditoria[]
   signatarios  Signatario[]
+  comentarios  Comentario[]
 
   @@map("usuarios")
 }
@@ -111,6 +121,7 @@ model Processo {
   atualizadoEm      DateTime       @updatedAt @map("atualizado_em")
   estagiarios       Estagiario[]
   documentos        Documento[]
+  comentarios       Comentario[]
 
   @@index([status])
   @@index([criadoPorId])
@@ -170,6 +181,7 @@ model Documento {
   codigoValidacao String?    @unique @map("codigo_validacao") @db.Char(12)
   signatarios  Signatario[]
   assinaturas  Assinatura[]
+  comentarios  Comentario[]
 
   // Mesmo PDF duas vezes no mesmo processo é reenvio. O índice também atende
   // às buscas por processo_id, por isso substitui o @@index([processoId]).
@@ -177,6 +189,33 @@ model Documento {
   @@index([estagiarioId])
   @@index([enviadoPorId])
   @@map("documentos")
+}
+
+// Conversa da análise sobre um documento do processo (RF-12). A API só cria: não há
+// edição nem exclusão, porque o comentário é parte do histórico da análise. A única
+// alteração é do banco: documento_id vira nulo quando o documento é removido.
+model Comentario {
+  id          String         @id @default(uuid()) @db.Uuid
+  processoId  String         @map("processo_id") @db.Uuid
+  processo    Processo       @relation(fields: [processoId], references: [id], onDelete: Restrict)
+  // Opcional, como no modelo do projeto. Se o documento for removido, o campo
+  // fica nulo e o comentário segue como histórico do processo.
+  documentoId String?        @map("documento_id") @db.Uuid
+  documento   Documento?     @relation(fields: [documentoId], references: [id], onDelete: SetNull)
+  // Cópia do documento no momento do comentário: depois que ele é substituído
+  // (removido e reenviado na correção), o comentário ainda diz a que documento se referia.
+  documentoTipo        TipoDocumento? @map("documento_tipo")
+  documentoNomeArquivo String?        @map("documento_nome_arquivo")
+  autorId     String         @map("autor_id") @db.Uuid
+  autor       Usuario        @relation(fields: [autorId], references: [id], onDelete: Restrict)
+  tipo        TipoComentario
+  texto       String
+  criadoEm    DateTime       @default(now()) @map("criado_em")
+
+  @@index([processoId, criadoEm])
+  @@index([documentoId, criadoEm])
+  @@index([autorId])
+  @@map("comentarios")
 }
 
 model Auditoria {

@@ -8,6 +8,7 @@ import { ProcessosModule } from './modules/processos/processos.module.js';
 import { DocumentosModule } from './modules/documentos/documentos.module.js';
 import { AssinaturasModule } from './modules/assinaturas/assinaturas.module.js';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module.js';
+import { ComentariosModule } from './modules/comentarios/comentarios.module.js';
 import { HealthController } from './health/health.controller.js';
 
 @Module({
@@ -17,6 +18,7 @@ import { HealthController } from './health/health.controller.js';
     AuthModule,
     ProcessosModule,
     DocumentosModule,
+    ComentariosModule,
     AssinaturasModule,
     AuditoriaModule,
   ],
