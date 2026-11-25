@@ -10,8 +10,10 @@ import { Perfil, StatusProcesso } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import type { UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import { AuditoriaService } from '../auditoria/auditoria.service.js';
+import { TRANSICOES, podeTransicionar, type AcaoProcesso } from './maquina-estados.js';
 import {
   AnalisarProcessoDto,
+  ApontarPendenciaDto,
   AtualizarProcessoDto,
   CriarProcessoDto,
   ListarProcessosDto,
@@ -134,6 +136,82 @@ export class ProcessosService {
         dadosDepois: { observacaoAnalise: depois.observacaoAnalise },
       });
       return depois;
+    });
+  }
+
+  // --- Máquina de estados (RF-07). As regras ficam em maquina-estados.ts. ---
+
+  // rascunho -> enviado e pendencia -> enviado (reenvio). Representante.
+  enviar(id: string, usuario: UsuarioAutenticado) {
+    return this.transicionar(id, 'enviar', usuario);
+  }
+
+  // enviado -> em_analise. Coordenação.
+  iniciarAnalise(id: string, usuario: UsuarioAutenticado) {
+    return this.transicionar(id, 'iniciar_analise', usuario);
+  }
+
+  // em_analise -> pendencia, gravando o motivo na mesma transação. Coordenação.
+  apontarPendencia(id: string, dto: ApontarPendenciaDto, usuario: UsuarioAutenticado) {
+    return this.transicionar(id, 'apontar_pendencia', usuario, {
+      observacaoAnalise: dto.motivo,
+    });
+  }
+
+  // em_analise -> aprovado. Coordenação. A ida para aguardando_assinaturas é do
+  // módulo de assinaturas (POST /assinaturas/processos/:id/iniciar).
+  aprovar(id: string, usuario: UsuarioAutenticado) {
+    return this.transicionar(id, 'aprovar', usuario);
+  }
+
+  // Ordem das checagens: perfil (403), escopo (404), status (409).
+  private async transicionar(
+    id: string,
+    acao: AcaoProcesso,
+    usuario: UsuarioAutenticado,
+    extras: { observacaoAnalise?: string } = {},
+  ) {
+    const regra = TRANSICOES[acao];
+    if (usuario.perfil !== regra.perfil) {
+      throw new ForbiddenException(`Seu perfil não pode executar esta ação (${acao})`);
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const antes = await tx.processo.findFirst({
+        where: { id, ...this.escopo(usuario) },
+      });
+      if (!antes) throw new NotFoundException('Processo não encontrado');
+      if (!podeTransicionar(acao, antes.status)) {
+        throw conflito(
+          'transicao_invalida',
+          `Processo em ${antes.status} não pode ${regra.descricao}`,
+        );
+      }
+
+      // A condição de status vai no próprio UPDATE (mesmo padrão do #70): se
+      // outro pedido mudou o status entre a leitura e aqui, nada é alterado.
+      const { count } = await tx.processo.updateMany({
+        where: { id, status: antes.status },
+        data: { status: regra.para, ...extras },
+      });
+      if (count === 0) {
+        throw conflito(
+          'transicao_invalida',
+          'O status do processo mudou durante a operação. Recarregue e tente de novo.',
+        );
+      }
+
+      const camposExtras = Object.keys(extras) as (keyof typeof extras)[];
+      await this.auditoria.registrar(tx, usuario, {
+        acao: 'TRANSICAO',
+        entidade: 'processo',
+        entidadeId: id,
+        dadosAntes: {
+          status: antes.status,
+          ...Object.fromEntries(camposExtras.map((campo) => [campo, antes[campo]])),
+        },
+        dadosDepois: { status: regra.para, ...extras },
+      });
+      return tx.processo.findUniqueOrThrow({ where: { id } });
     });
   }
 
