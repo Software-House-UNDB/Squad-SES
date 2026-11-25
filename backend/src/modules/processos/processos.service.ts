@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { conflito } from '../../common/conflito.js';
 import type { Prisma } from '../../generated/prisma/client.js';
@@ -12,6 +13,7 @@ import { escopoProcesso } from '../auth/escopo-processo.js';
 import type { UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import { AuditoriaService } from '../auditoria/auditoria.service.js';
 import { TRANSICOES, podeTransicionar, type AcaoProcesso } from './maquina-estados.js';
+import { pendenciasPacote } from './pacote.js';
 import {
   AnalisarProcessoDto,
   ApontarPendenciaDto,
@@ -143,8 +145,11 @@ export class ProcessosService {
   // --- Máquina de estados (RF-07). As regras ficam em maquina-estados.ts. ---
 
   // rascunho -> enviado e pendencia -> enviado (reenvio). Representante.
+  // Com pacote incompleto o processo não avança (RF-08): 422 com tudo o que falta.
   enviar(id: string, usuario: UsuarioAutenticado) {
-    return this.transicionar(id, 'enviar', usuario);
+    return this.transicionar(id, 'enviar', usuario, {}, (tx) =>
+      this.garantirPacoteCompleto(tx, id),
+    );
   }
 
   // enviado -> em_analise. Coordenação.
@@ -171,6 +176,8 @@ export class ProcessosService {
     acao: AcaoProcesso,
     usuario: UsuarioAutenticado,
     extras: { observacaoAnalise?: string } = {},
+    // Checagem extra antes de mudar o status, na mesma transação (ex.: barramento).
+    verificar?: (tx: Prisma.TransactionClient) => Promise<void>,
   ) {
     const regra = TRANSICOES[acao];
     if (usuario.perfil !== regra.perfil) {
@@ -187,6 +194,8 @@ export class ProcessosService {
           `Processo em ${antes.status} não pode ${regra.descricao}`,
         );
       }
+
+      await verificar?.(tx);
 
       // A condição de status vai no próprio UPDATE (mesmo padrão do #70): se
       // outro pedido mudou o status entre a leitura e aqui, nada é alterado.
@@ -214,6 +223,24 @@ export class ProcessosService {
       });
       return tx.processo.findUniqueOrThrow({ where: { id } });
     });
+  }
+
+  private async garantirPacoteCompleto(tx: Prisma.TransactionClient, processoId: string) {
+    // Em sequência, não em Promise.all: consultas paralelas na mesma transação
+    // interativa não são recomendadas pelo Prisma.
+    const estagiarios = await tx.estagiario.findMany({
+      where: { processoId },
+      select: { id: true, nome: true, menorIdade: true },
+      orderBy: { nome: 'asc' },
+    });
+    const documentos = await tx.documento.findMany({
+      where: { processoId },
+      select: { tipo: true, estagiarioId: true },
+    });
+    const pendencias = pendenciasPacote(estagiarios, documentos);
+    if (pendencias.length > 0) {
+      throw new UnprocessableEntityException({ erro: 'pacote_incompleto', pendencias });
+    }
   }
 
   remover(id: string, usuario: UsuarioAutenticado) {

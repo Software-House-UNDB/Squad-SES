@@ -69,7 +69,9 @@ export class ProcessosController {
   @HttpCode(200)
   @ApiOperation({
     summary: 'Envia o processo à coordenação (rascunho → enviado; pendencia → enviado no reenvio)',
-    description: 'Representante UNDB. 409 se o status atual não permite o envio.',
+    description:
+      'Representante UNDB. 409 se o status atual não permite o envio; 422 (pacote_incompleto) ' +
+      'com a lista de pendências se faltar estagiário ou documento obrigatório (RF-08).',
   })
   enviar(@Param('id', ParseUUIDPipe) id: string, @UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.processos.enviar(id, usuario);

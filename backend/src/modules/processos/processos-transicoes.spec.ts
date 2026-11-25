@@ -1,15 +1,20 @@
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { describe, expect, it, vi } from 'vitest';
-import { Perfil, StatusProcesso } from '../../generated/prisma/enums.js';
+import { Perfil, StatusProcesso, TipoDocumento } from '../../generated/prisma/enums.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import type { AuditoriaService } from '../auditoria/auditoria.service.js';
 import { ApontarPendenciaDto } from './dto/processo.dto.js';
 import { ProcessosService } from './processos.service.js';
 
-const COORDENACAO = { id: 'coord', perfil: Perfil.COORDENACAO_SES };
-const REPRESENTANTE = { id: 'rep', perfil: Perfil.REPRESENTANTE_UNDB };
+const COORDENACAO = { id: 'coord', perfil: Perfil.COORDENACAO_SES, instituicao: 'SES-MA' };
+const REPRESENTANTE = { id: 'rep', perfil: Perfil.REPRESENTANTE_UNDB, instituicao: 'UNDB' };
 
 type ProcessoFalso = {
   id: string;
@@ -18,9 +23,21 @@ type ProcessoFalso = {
   criadoPorId: string;
 };
 
+// Pacote completo de um estagiário maior de idade (RF-08), para o "enviar" passar.
+const ESTAGIARIOS = [{ id: 'e1', nome: 'Ana Souza', menorIdade: false }];
+const DOCUMENTOS = [
+  { tipo: TipoDocumento.plano_atividades, estagiarioId: null },
+  { tipo: TipoDocumento.apolice, estagiarioId: null },
+  { tipo: TipoDocumento.lista_indicados, estagiarioId: null },
+  { tipo: TipoDocumento.documento_pessoal, estagiarioId: 'e1' },
+];
+
 // Banco falso com um processo só: o updateMany respeita a condição de status,
 // como o Postgres faria, para os testes seguirem o fluxo real de transições.
-function montar(inicial: Partial<ProcessoFalso> | null = {}) {
+function montar(
+  inicial: Partial<ProcessoFalso> | null = {},
+  pacote: { estagiarios?: object[]; documentos?: object[] } = {},
+) {
   let processo: ProcessoFalso | null = inicial && {
     id: 'p1',
     status: StatusProcesso.rascunho,
@@ -31,15 +48,15 @@ function montar(inicial: Partial<ProcessoFalso> | null = {}) {
   const tx = {
     processo: {
       findFirst: vi.fn(() => Promise.resolve(processo && { ...processo })),
-      updateMany: vi.fn(
-        ({ where, data }: { where: { status: StatusProcesso }; data: object }) => {
-          if (!processo || processo.status !== where.status) return Promise.resolve({ count: 0 });
-          processo = { ...processo, ...data };
-          return Promise.resolve({ count: 1 });
-        },
-      ),
+      updateMany: vi.fn(({ where, data }: { where: { status: StatusProcesso }; data: object }) => {
+        if (!processo || processo.status !== where.status) return Promise.resolve({ count: 0 });
+        processo = { ...processo, ...data };
+        return Promise.resolve({ count: 1 });
+      }),
       findUniqueOrThrow: vi.fn(() => Promise.resolve({ ...processo })),
     },
+    estagiario: { findMany: vi.fn().mockResolvedValue(pacote.estagiarios ?? ESTAGIARIOS) },
+    documento: { findMany: vi.fn().mockResolvedValue(pacote.documentos ?? DOCUMENTOS) },
   };
   const prisma = {
     $transaction: (operacao: (cliente: typeof tx) => unknown) => operacao(tx),
@@ -148,13 +165,13 @@ describe('ProcessosService: transições recusadas', () => {
     expect(await erroDe(service.enviar('p1', REPRESENTANTE))).toBeInstanceOf(NotFoundException);
   });
 
-  it('o representante só alcança processos do próprio escopo', async () => {
+  it('o representante só alcança processos da própria instituição (ABAC, #54)', async () => {
     const { tx, service } = montar();
 
     await service.enviar('p1', REPRESENTANTE);
 
     expect(tx.processo.findFirst).toHaveBeenCalledWith({
-      where: { id: 'p1', criadoPorId: 'rep' },
+      where: { id: 'p1', criadoPor: { instituicao: 'UNDB' } },
     });
   });
 
@@ -201,6 +218,68 @@ describe('ProcessosService: transições recusadas', () => {
       erro: 'transicao_invalida',
     });
     expect(auditoria.registrar).not.toHaveBeenCalled();
+  });
+});
+
+describe('ProcessosService: barramento do pacote incompleto no enviar (RF-08)', () => {
+  it.each([StatusProcesso.rascunho, StatusProcesso.pendencia])(
+    'em %s, pacote incompleto: 422 com as pendências, sem mudar o status nem auditar',
+    async (status) => {
+      const { tx, auditoria, service, atual } = montar(
+        { status },
+        { estagiarios: [{ id: 'e2', nome: 'Bia Lima', menorIdade: true }], documentos: [] },
+      );
+
+      const erro = await erroDe(service.enviar('p1', REPRESENTANTE));
+
+      expect(erro).toBeInstanceOf(UnprocessableEntityException);
+      expect((erro as UnprocessableEntityException).getResponse()).toEqual({
+        erro: 'pacote_incompleto',
+        pendencias: expect.arrayContaining([
+          expect.objectContaining({ campo: 'apolice' }),
+          expect.objectContaining({ campo: 'declaracao', estagiarioId: 'e2' }),
+        ]),
+      });
+      expect(tx.processo.updateMany).not.toHaveBeenCalled();
+      expect(auditoria.registrar).not.toHaveBeenCalled();
+      expect(atual()?.status).toBe(status);
+    },
+  );
+
+  it('processo sem estagiários: 422', async () => {
+    const { service } = montar({}, { estagiarios: [] });
+
+    const erro = await erroDe(service.enviar('p1', REPRESENTANTE));
+
+    expect((erro as UnprocessableEntityException).getResponse()).toMatchObject({
+      erro: 'pacote_incompleto',
+      pendencias: [{ campo: 'estagiarios', motivo: 'processo sem estagiários' }],
+    });
+  });
+
+  it('confere o pacote só no enviar, e do processo certo', async () => {
+    const { tx, service } = montar();
+
+    await service.enviar('p1', REPRESENTANTE);
+
+    expect(tx.documento.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { processoId: 'p1' } }),
+    );
+  });
+
+  it('status inválido vem antes do pacote: 409, sem consultar documentos', async () => {
+    const { tx, service } = montar({ status: StatusProcesso.em_analise }, { documentos: [] });
+
+    expect(await erroDe(service.enviar('p1', REPRESENTANTE))).toBeInstanceOf(ConflictException);
+    expect(tx.documento.findMany).not.toHaveBeenCalled();
+  });
+
+  it('as ações da coordenação não conferem o pacote', async () => {
+    const { tx, service } = montar({ status: StatusProcesso.enviado }, { documentos: [] });
+
+    await service.iniciarAnalise('p1', COORDENACAO);
+
+    expect(tx.documento.findMany).not.toHaveBeenCalled();
   });
 });
 
