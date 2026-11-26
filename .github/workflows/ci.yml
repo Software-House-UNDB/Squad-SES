@@ -72,6 +72,56 @@ jobs:
       - name: Unit tests
         run: npm run test --workspace=backend
 
+  backend-integracao:
+    name: Backend (integração com Postgres)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+
+    # Banco descartável só deste job: os testes gravam e não apagam nada
+    # (a auditoria é append-only).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ses_teste
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ses_teste
+      DATABASE_URL_TESTE: postgresql://postgres:postgres@localhost:5432/ses_teste
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install (root workspace)
+        run: npm ci
+
+      - name: Prisma generate
+        run: npm run prisma:generate --workspace=backend
+
+      # Aplica as migrations como o deploy do Render: também testa que elas
+      # sobem do zero num Postgres 16 limpo.
+      - name: Migrations
+        working-directory: backend
+        run: npx prisma migrate deploy
+
+      - name: Testes de integração
+        run: npm run test:e2e --workspace=backend
+
   frontend:
     name: Frontend (lint + build + test)
     needs: changes
@@ -103,7 +153,7 @@ jobs:
 
   ci-ok:
     name: CI OK
-    needs: [changes, backend, frontend]
+    needs: [changes, backend, backend-integracao, frontend]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -112,7 +162,7 @@ jobs:
           if [[ "${{ needs.changes.result }}" != "success" ]]; then
             echo "Job 'changes' falhou: ${{ needs.changes.result }}"; exit 1
           fi
-          for result in "${{ needs.backend.result }}" "${{ needs.frontend.result }}"; do
+          for result in "${{ needs.backend.result }}" "${{ needs.backend-integracao.result }}" "${{ needs.frontend.result }}"; do
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
               echo "Algum job de build/test falhou: $result"; exit 1
             fi
