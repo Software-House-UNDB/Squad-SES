@@ -15,7 +15,10 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { Perfil } from '../../generated/prisma/enums.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { Perfis } from '../auth/perfis.decorator.js';
+import { PerfisGuard } from '../auth/perfis.guard.js';
 import { UsuarioAtual, type UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import { AtualizarEstagiarioDto, CriarEstagiarioDto } from './dto/estagiario.dto.js';
 import { EstagiariosService } from './estagiarios.service.js';
@@ -24,12 +27,13 @@ const TAMANHO_MAXIMO_CSV = 1024 * 1024;
 
 @ApiTags('estagiarios')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PerfisGuard)
 @Controller('processos/:processoId/estagiarios')
 export class EstagiariosController {
   constructor(private readonly estagiarios: EstagiariosService) {}
 
   @Post('lote')
+  @Perfis(Perfil.REPRESENTANTE_UNDB)
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -53,6 +57,7 @@ export class EstagiariosController {
   }
 
   @Post()
+  @Perfis(Perfil.REPRESENTANTE_UNDB)
   criar(
     @Param('processoId', ParseUUIDPipe) processoId: string,
     @Body() dto: CriarEstagiarioDto,
@@ -79,6 +84,7 @@ export class EstagiariosController {
   }
 
   @Patch(':id')
+  @Perfis(Perfil.REPRESENTANTE_UNDB)
   atualizar(
     @Param('processoId', ParseUUIDPipe) processoId: string,
     @Param('id', ParseUUIDPipe) id: string,
@@ -89,6 +95,7 @@ export class EstagiariosController {
   }
 
   @Delete(':id')
+  @Perfis(Perfil.REPRESENTANTE_UNDB)
   @HttpCode(204)
   remover(
     @Param('processoId', ParseUUIDPipe) processoId: string,

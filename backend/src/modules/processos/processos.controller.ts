@@ -12,7 +12,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Perfil } from '../../generated/prisma/enums.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { Perfis } from '../auth/perfis.decorator.js';
+import { PerfisGuard } from '../auth/perfis.guard.js';
 import { UsuarioAtual, type UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import {
   AnalisarProcessoDto,
@@ -25,12 +28,13 @@ import { ProcessosService } from './processos.service.js';
 
 @ApiTags('processos')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PerfisGuard)
 @Controller('processos')
 export class ProcessosController {
   constructor(private readonly processos: ProcessosService) {}
 
   @Post()
+  @Perfis(Perfil.REPRESENTANTE_UNDB)
   criar(@Body() dto: CriarProcessoDto, @UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.processos.criar(dto, usuario);
   }
@@ -46,6 +50,7 @@ export class ProcessosController {
   }
 
   @Patch(':id')
+  @Perfis(Perfil.REPRESENTANTE_UNDB)
   atualizar(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AtualizarProcessoDto,
@@ -55,6 +60,7 @@ export class ProcessosController {
   }
 
   @Patch(':id/analise')
+  @Perfis(Perfil.COORDENACAO_SES)
   analisar(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AnalisarProcessoDto,
@@ -66,6 +72,7 @@ export class ProcessosController {
   // --- Máquina de estados (RF-07) ---
 
   @Post(':id/enviar')
+  @Perfis(Perfil.REPRESENTANTE_UNDB)
   @HttpCode(200)
   @ApiOperation({
     summary: 'Envia o processo à coordenação (rascunho → enviado; pendencia → enviado no reenvio)',
@@ -78,6 +85,7 @@ export class ProcessosController {
   }
 
   @Post(':id/iniciar-analise')
+  @Perfis(Perfil.COORDENACAO_SES)
   @HttpCode(200)
   @ApiOperation({ summary: 'Coordenação assume a análise (enviado → em_analise)' })
   iniciarAnalise(
@@ -88,6 +96,7 @@ export class ProcessosController {
   }
 
   @Post(':id/pendencia')
+  @Perfis(Perfil.COORDENACAO_SES)
   @HttpCode(200)
   @ApiOperation({
     summary: 'Coordenação devolve com pendência (em_analise ou aprovado → pendencia)',
@@ -104,6 +113,7 @@ export class ProcessosController {
   }
 
   @Post(':id/aprovar')
+  @Perfis(Perfil.COORDENACAO_SES)
   @HttpCode(200)
   @ApiOperation({
     summary: 'Coordenação aprova (em_analise → aprovado)',
@@ -115,6 +125,7 @@ export class ProcessosController {
   }
 
   @Delete(':id')
+  @Perfis(Perfil.REPRESENTANTE_UNDB)
   @HttpCode(204)
   remover(@Param('id', ParseUUIDPipe) id: string, @UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.processos.remover(id, usuario);

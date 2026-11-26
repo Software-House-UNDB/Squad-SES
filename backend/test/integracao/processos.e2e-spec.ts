@@ -76,6 +76,20 @@ describe('POST /processos', () => {
   ])('400 com %s', async (_caso, corpo) => {
     await representante.post('/processos').send(corpo).expect(400);
   });
+
+  it('a coordenação não abre processo (403 perfil_nao_autorizado, RBAC #53) e nada é gravado', async () => {
+    const antes = await prisma.processo.count({ where: { criadoPorId: usuarios.coordenacao.id } });
+
+    const { body } = await coordenacao
+      .post('/processos')
+      .send({ tipoEstagio: TipoEstagio.obrigatorio })
+      .expect(403);
+
+    expect(body).toMatchObject({ erro: 'perfil_nao_autorizado' });
+    expect(await prisma.processo.count({ where: { criadoPorId: usuarios.coordenacao.id } })).toBe(
+      antes,
+    );
+  });
 });
 
 describe('GET /processos', () => {
@@ -244,7 +258,8 @@ describe('PATCH /processos/:id/analise', () => {
     await representante
       .patch(`/processos/${id}/analise`)
       .send({ observacaoAnalise: 'x' })
-      .expect(403);
+      .expect(403)
+      .expect(({ body }) => expect(body).toMatchObject({ erro: 'perfil_nao_autorizado' }));
   });
 
   it('rascunho ainda não pode ser analisado (409)', async () => {
