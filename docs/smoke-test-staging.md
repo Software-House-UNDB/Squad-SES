@@ -54,14 +54,16 @@ Todos os 7 itens acima. Qualquer 5xx reprova e exige abrir issue antes de prosse
 
 Valida que o frontend consegue autenticar no backend e trocar dados reais com o banco. **Depende** de pré-requisitos abaixo.
 
-### Pré-requisitos (bloqueio atual)
+### Pré-requisitos (situação em 26/11/2026)
 
-- [ ] `auth.controller.ts` com `POST /auth/login` implementado (hoje é só `class AuthController {}`) — responsável: **William** (Daily Tracker linha 22)
-- [ ] `POST /auth/refresh` implementado
-- [ ] CORS habilitado: `app.enableCors({ origin: 'https://squad-ses-frontend.vercel.app', credentials: true })` em `main.ts` (hoje headers `access-control-*` ausentes)
-- [ ] `app.set('trust proxy', 1)` — necessário atrás do proxy do Render
-- [ ] `VITE_API_URL=https://squad-ses-backend.onrender.com` no Vercel (configurado 10/11)
-- [ ] `VITE_AUTH_MOCK=false` no Vercel + redeploy para pegar as duas vars
+- [x] `POST /auth/login` e `POST /auth/refresh` (PR #30, 10/11)
+- [x] CORS da API por `CORS_ORIGIN` (PR #73) + variável no Render — preflight de `https://squad-ses-frontend.vercel.app` responde 204 com `Access-Control-Allow-Origin` (conferido 26/11)
+- [x] `trust proxy` (PR #73); falta validar o número de saltos no staging (Daily Tracker, saltos do proxy)
+- [x] `VITE_API_URL=https://squad-ses-backend.onrender.com` no Vercel (Production/Preview/Development, desde 10/11)
+- [x] Rewrite de SPA (`frontend/vercel.json`): sem ele, qualquer rota acessada direto (`/login`, `/assinar/<token>` dos e-mails, `/validar/<código>`) dá 404 da Vercel
+- [ ] **Contas no staging:** seed (`npm run seed`, 2 contas) ou o script das contas do piloto rodado no Neon — sem isso, com o mock desligado ninguém entra
+- [ ] `VITE_AUTH_MOCK=false` no Vercel (hoje `true`)
+- [ ] **Deploy de produção atualizado:** o domínio `squad-ses-frontend.vercel.app` ainda serve o deploy manual de 10/11 (bundle com `localhost:3000` e login de demonstração). A `dev` só gera previews; a `main` está no commit inicial. Fazer `vercel --prod` a partir da `dev` (ou ligar a Production Branch à `dev`) depois dos dois itens acima
 
 ### Checklist
 
@@ -92,8 +94,8 @@ Valida que documentos anexados a um processo vão para o B2 e voltam por URL ass
 ### Pré-requisitos
 
 - [ ] Nível 2 passando (precisa de auth real)
-- [ ] `documentos.controller.ts` com `POST /processos/:processoId/documentos` (upload) e `GET /processos/:processoId/documentos/:id/url` (download via URL assinada) — Sprint 2
-- [ ] Integração `@aws-sdk/client-s3` apontando pros endpoints do B2
+- [x] `POST /processos/:processoId/documentos` (upload) e `GET /processos/:processoId/documentos/:id/url` (URL assinada) — PRs #23/#45
+- [x] Integração `@aws-sdk/client-s3` com o B2 + regra de CORS no bucket (Daily Tracker L32, 24/11)
 - [ ] Bucket `ses-docs-staging-undb` com Application Key `ses-staging-backend` injetada no Render (`S3_*` vars do `.env.example`)
 
 ### Checklist
