@@ -71,6 +71,14 @@ const ROTAS: Rota[] = [
   ['post', `/assinaturas/processos/${ID}/iniciar`, COORD, 'assinaturas', 'iniciarAssinaturas'],
   ['post', `/assinaturas/signatarios/${ID}/assinar`, REP, 'assinaturas', 'assinarLogado'],
   ['get', `/assinaturas/processos/${ID}`, 'ambos', 'assinaturas', 'listarPorProcesso'],
+  [
+    'post',
+    `/assinaturas/processos/${ID}/reenviar-links`,
+    COORD,
+    'assinaturas',
+    'reenviarLinksPendentes',
+  ],
+  ['post', `/assinaturas/signatarios/${ID}/reenviar-link`, COORD, 'assinaturas', 'reenviarLink'],
 ];
 
 let app: INestApplication;

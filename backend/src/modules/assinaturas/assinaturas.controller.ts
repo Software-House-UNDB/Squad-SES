@@ -106,10 +106,13 @@ export class AssinaturasController {
   }
 
   // Manda de novo os links que falharam no envio.
+  // Reenvio é da coordenação (decisão de TL 26/11): ela acompanha as
+  // assinaturas (Figma #9/04–05), e cada reenvio invalida o link anterior.
   @Post('processos/:processoId/reenviar-links')
   @HttpCode(200)
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PerfisGuard)
+  @Perfis(Perfil.COORDENACAO_SES)
   reenviarLinksPendentes(
     @Param('processoId', ParseUUIDPipe) processoId: string,
     @UsuarioAtual() usuario: UsuarioAutenticado,
@@ -120,7 +123,8 @@ export class AssinaturasController {
   @Post('signatarios/:id/reenviar-link')
   @HttpCode(200)
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PerfisGuard)
+  @Perfis(Perfil.COORDENACAO_SES)
   reenviarLink(
     @Param('id', ParseUUIDPipe) id: string,
     @UsuarioAtual() usuario: UsuarioAutenticado,
