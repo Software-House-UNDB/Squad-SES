@@ -2,13 +2,19 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { conflito } from '../../common/conflito.js';
 import type { Prisma } from '../../generated/prisma/client.js';
+import { TipoDocumento } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { StorageService } from '../../storage/storage.service.js';
 import type { UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import { AuditoriaService } from '../auditoria/auditoria.service.js';
+import { registrosDeAcesso } from '../auditoria/acesso-estagiarios.js';
 import { AtualizarEstagiarioDto, CriarEstagiarioDto } from './dto/estagiario.dto.js';
+import { problemasJornada } from './jornada.js';
 import { duplicadosNoProcesso, lerLote, loteInvalido } from './lote-estagiarios.js';
 import { ProcessosService } from './processos.service.js';
 
@@ -38,23 +44,30 @@ function semCpf<T extends { cpf: string }>({ cpf: _cpf, ...dados }: T) {
 
 @Injectable()
 export class EstagiariosService {
+  private readonly logger = new Logger(EstagiariosService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly processos: ProcessosService,
     private readonly auditoria: AuditoriaService,
+    private readonly storage: StorageService,
   ) {}
 
   async listar(processoId: string, usuario: UsuarioAutenticado) {
     await this.processos.garantirAcesso(processoId, usuario);
-    return this.prisma.estagiario.findMany({
+    const estagiarios = await this.prisma.estagiario.findMany({
       where: { processoId },
       orderBy: { nome: 'asc' },
     });
+    await this.auditoria.registrarAcesso(usuario, registrosDeAcesso(estagiarios, processoId));
+    return estagiarios;
   }
 
   async buscar(processoId: string, id: string, usuario: UsuarioAutenticado) {
     await this.processos.garantirAcesso(processoId, usuario);
-    return this.obter(this.prisma, processoId, id);
+    const estagiario = await this.obter(this.prisma, processoId, id);
+    await this.auditoria.registrarAcesso(usuario, registrosDeAcesso([estagiario], processoId));
+    return estagiario;
   }
 
   criar(processoId: string, dto: CriarEstagiarioDto, usuario: UsuarioAutenticado) {
@@ -101,6 +114,19 @@ export class EstagiariosService {
         if (menorIdade && !responsavel) {
           throw new BadRequestException('nome do responsável é obrigatório para menor de idade');
         }
+
+        // Teto legal da jornada (#79) contra o estado final: o DTO só vê o
+        // que veio no PATCH (ex.: só diasSemana, com horasPorDia já gravado).
+        const final = <C extends 'horasPorDia' | 'diasSemana' | 'horarioInicio' | 'horarioFim'>(
+          campo: C,
+        ) => (dados[campo] !== undefined ? dados[campo] : antes[campo]);
+        const [jornada] = problemasJornada({
+          horasPorDia: final('horasPorDia'),
+          diasSemana: final('diasSemana'),
+          horarioInicio: final('horarioInicio'),
+          horarioFim: final('horarioFim'),
+        });
+        if (jornada) throw new BadRequestException(jornada.motivo);
         const depois = await tx.estagiario.update({
           where: { id },
           data: menorIdade ? dados : { ...dados, responsavelNome: null },
@@ -117,17 +143,42 @@ export class EstagiariosService {
     );
   }
 
-  remover(processoId: string, id: string, usuario: UsuarioAutenticado) {
-    return this.prisma.$transaction(async (tx) => {
+  async remover(processoId: string, id: string, usuario: UsuarioAutenticado) {
+    const tcesRemovidos = await this.prisma.$transaction(async (tx) => {
       await this.processos.obterEditavel(tx, processoId, usuario);
       const estagiario = await this.obter(tx, processoId, id);
-      const documentos = await tx.documento.count({
+      const documentos = await tx.documento.findMany({
         where: { estagiarioId: id },
       });
-      if (documentos > 0) {
+      // O TCE do estagiário sai junto: ele é refeito na próxima geração (#76).
+      // Sem isso, um processo devolvido de aprovado para pendência travaria a
+      // remoção, porque o representante não apaga o TCE gerado pela coordenação.
+      // Os documentos que o representante anexou continuam bloqueando.
+      const tces = documentos.filter((d) => d.tipo === TipoDocumento.termo_compromisso);
+      if (documentos.length > tces.length) {
         throw new ConflictException('Estagiário possui documentos enviados');
       }
+      // Em rascunho/pendência não há signatários; a checagem evita o P2003
+      // (500) se um dia a ordem dos passos mudar.
+      if (
+        tces.length > 0 &&
+        (await tx.signatario.count({ where: { documentoId: { in: tces.map((d) => d.id) } } }))
+      ) {
+        throw conflito(
+          'documento_em_assinatura',
+          'O TCE do estagiário já foi enviado para assinatura',
+        );
+      }
 
+      for (const { storageKey: _chave, ...tce } of tces) {
+        await tx.documento.delete({ where: { id: tce.id } });
+        await this.auditoria.registrar(tx, usuario, {
+          acao: 'DELETE',
+          entidade: 'documento',
+          entidadeId: tce.id,
+          dadosAntes: tce,
+        });
+      }
       await tx.estagiario.delete({ where: { id } });
       await this.auditoria.registrar(tx, usuario, {
         acao: 'DELETE',
@@ -135,7 +186,11 @@ export class EstagiariosService {
         entidadeId: id,
         dadosAntes: semCpf(estagiario),
       });
+      return tces.map((tce) => tce.storageKey);
     });
+    // Só apaga do bucket depois do commit: falhar aqui deixa um órfão no
+    // bucket, nunca um registro apontando para arquivo inexistente.
+    await Promise.all(tcesRemovidos.map((chave) => this.removerObjeto(chave)));
   }
 
   // O lote é tudo ou nada: uma linha inválida rejeita o arquivo inteiro.
@@ -172,6 +227,14 @@ export class EstagiariosService {
     });
     if (!estagiario) throw new NotFoundException('Estagiário não encontrado');
     return estagiario;
+  }
+
+  private async removerObjeto(chave: string) {
+    try {
+      await this.storage.remover(chave);
+    } catch (erro) {
+      this.logger.error(`Objeto órfão no storage: ${chave}`, erro);
+    }
   }
 
   private async comDuplicidadeTratada<T>(operacao: () => Promise<T>) {

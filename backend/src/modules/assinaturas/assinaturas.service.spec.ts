@@ -23,7 +23,12 @@ import {
 } from './assinaturas.service.js';
 import { gerarToken, hashToken, mascararEmail } from './tokens.js';
 
-const REPRESENTANTE = { id: 'rep', perfil: Perfil.REPRESENTANTE_UNDB, ip: '10.0.0.1' };
+const REPRESENTANTE = {
+  id: 'rep',
+  perfil: Perfil.REPRESENTANTE_UNDB,
+  instituicao: 'UNDB',
+  ip: '10.0.0.1',
+};
 const COORDENACAO = { id: 'coord', perfil: Perfil.COORDENACAO_SES, ip: '10.0.0.2' };
 const CONFIG: Record<string, string> = {
   FRONTEND_URL: 'https://ses.exemplo.com/',
@@ -46,6 +51,7 @@ const PROCESSO = {
   supervisorNome: 'Sup Souza',
   supervisorEmail: 'sup@exemplo.com',
   criadoPor: { id: 'rep', nome: 'Rep UNDB', email: 'rep@undb.edu.br' },
+  estagiarios: [{ id: 'e1' }],
   documentos: [TCE('d1', { id: 'e1', nome: 'Ana', email: 'ana@exemplo.com' })],
 };
 
@@ -112,7 +118,7 @@ function montar(config: Record<string, string | undefined> = CONFIG) {
     baixar: vi.fn().mockResolvedValue(PDF),
     urlAssinada: vi.fn().mockResolvedValue('https://storage/assinada'),
   };
-  const auditoria = { registrar: vi.fn() };
+  const auditoria = { registrar: vi.fn(), registrarAcesso: vi.fn() };
   const email = { enviar: vi.fn() };
   const service = new AssinaturasService(
     prisma as unknown as PrismaService,
@@ -232,6 +238,7 @@ describe('AssinaturasService.criarSignatarios', () => {
       ...PROCESSO,
       supervisorNome: null,
       supervisorEmail: null,
+      estagiarios: [{ id: 'e2' }],
       documentos: [TCE('d1', null), TCE('d2', { id: 'e2', nome: 'Bia', email: null })],
     });
 
@@ -258,7 +265,36 @@ describe('AssinaturasService.criarSignatarios', () => {
 
     const { corpo } = await respostaDe(service.criarSignatarios(tx as never, 'p1', REPRESENTANTE));
 
-    expect(corpo).toMatchObject({ pendencias: [{ campo: 'tce' }] });
+    expect(corpo).toMatchObject({
+      pendencias: [
+        { campo: 'tce', motivo: 'nenhum TCE enviado no processo' },
+        { campo: 'tce', motivo: 'estagiário sem TCE', estagiarioId: 'e1' },
+      ],
+    });
+  });
+
+  it('exige um TCE por estagiário do processo', async () => {
+    const { service, tx } = montar();
+    const ana = { id: 'e1', nome: 'Ana', email: 'ana@exemplo.com' };
+    tx.processo.findUnique.mockResolvedValue({
+      ...PROCESSO,
+      estagiarios: [{ id: 'e1' }, { id: 'e2' }],
+      documentos: [TCE('d1', ana), TCE('d2', ana)],
+    });
+
+    const { status, corpo } = await respostaDe(
+      service.criarSignatarios(tx as never, 'p1', REPRESENTANTE),
+    );
+
+    expect(status).toBe(400);
+    expect(corpo).toEqual({
+      erro: 'assinatura_incompleta',
+      pendencias: [
+        { campo: 'tce', motivo: 'estagiário com mais de um TCE', estagiarioId: 'e1' },
+        { campo: 'tce', motivo: 'estagiário sem TCE', estagiarioId: 'e2' },
+      ],
+    });
+    expect(tx.signatario.create).not.toHaveBeenCalled();
   });
 
   it('recusa processo fora de aguardando_assinaturas', async () => {
@@ -470,7 +506,7 @@ describe('AssinaturasService.reenviarLinksPendentes', () => {
     expect(email.enviar).toHaveBeenCalledTimes(1);
   });
 
-  it('limita o representante aos próprios processos', async () => {
+  it('limita o representante aos processos da própria instituição', async () => {
     const { service, prisma } = montar();
     prisma.processo.findFirst.mockResolvedValue(null);
 
@@ -478,7 +514,7 @@ describe('AssinaturasService.reenviarLinksPendentes', () => {
       NotFoundException,
     );
     expect(prisma.processo.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'p1', criadoPorId: 'rep' } }),
+      expect.objectContaining({ where: { id: 'p1', criadoPor: { instituicao: 'UNDB' } } }),
     );
   });
 
@@ -507,7 +543,7 @@ describe('AssinaturasService.reenviarLink', () => {
     expect(JSON.stringify(registro)).not.toMatch(/token_hash|tokenHash/);
   });
 
-  it('limita o representante aos próprios processos', async () => {
+  it('limita o representante aos processos da própria instituição', async () => {
     const { service, prisma } = montar();
     prisma.signatario.findFirst.mockResolvedValue(null);
 
@@ -516,7 +552,7 @@ describe('AssinaturasService.reenviarLink', () => {
     );
     expect(prisma.signatario.findFirst.mock.calls[0][0].where).toEqual({
       id: 's1',
-      documento: { processo: { criadoPorId: 'rep' } },
+      documento: { processo: { criadoPor: { instituicao: 'UNDB' } } },
     });
   });
 
@@ -893,8 +929,10 @@ describe('AssinaturasService.assinarPorLink', () => {
 });
 
 describe('AssinaturasService.urlDocumentoPorLink', () => {
+  const EVIDENCIA = { ip: '200.1.2.3', userAgent: 'Firefox/140' };
+
   it('confere o código e devolve URL temporária do PDF', async () => {
-    const { service, prisma, storage } = montar();
+    const { service, prisma, storage, auditoria } = montar();
     prisma.signatario.findUnique.mockResolvedValue(
       signatarioDoLink({
         otpHash: await hash('012345'),
@@ -902,7 +940,7 @@ describe('AssinaturasService.urlDocumentoPorLink', () => {
       }),
     );
 
-    const resposta = await service.urlDocumentoPorLink(TOKEN, '012345');
+    const resposta = await service.urlDocumentoPorLink(TOKEN, '012345', EVIDENCIA);
 
     expect(resposta.url).toBe('https://storage/assinada');
     expect(storage.urlAssinada).toHaveBeenCalledWith(
@@ -911,16 +949,31 @@ describe('AssinaturasService.urlDocumentoPorLink', () => {
       'application/pdf',
       300,
     );
+    // Download pelo link: sem usuário, com o signatário e a origem.
+    expect(auditoria.registrarAcesso).toHaveBeenCalledWith(
+      { ip: '200.1.2.3' },
+      {
+        acao: 'DOWNLOAD',
+        entidade: 'documento',
+        entidadeId: 'd1',
+        dadosDepois: {
+          signatarioId: 's1',
+          papel: PapelSignatario.SUPERVISOR,
+          userAgent: 'Firefox/140',
+        },
+      },
+    );
   });
 
   it('sem código válido não gera URL', async () => {
-    const { service, prisma, storage } = montar();
+    const { service, prisma, storage, auditoria } = montar();
     prisma.signatario.findUnique.mockResolvedValue(signatarioDoLink());
 
-    await expect(service.urlDocumentoPorLink(TOKEN, '012345')).rejects.toBeInstanceOf(
+    await expect(service.urlDocumentoPorLink(TOKEN, '012345', EVIDENCIA)).rejects.toBeInstanceOf(
       GoneException,
     );
     expect(storage.urlAssinada).not.toHaveBeenCalled();
+    expect(auditoria.registrarAcesso).not.toHaveBeenCalled();
   });
 });
 
@@ -1001,7 +1054,7 @@ describe('AssinaturasService.assinarLogado', () => {
 });
 
 describe('AssinaturasService.listarPorProcesso', () => {
-  it('aplica o escopo do representante e responde 404 fora dele', async () => {
+  it('aplica o escopo institucional do representante e responde 404 fora dele', async () => {
     const { service, prisma } = montar();
     prisma.processo.findFirst.mockResolvedValue(null);
 
@@ -1010,7 +1063,7 @@ describe('AssinaturasService.listarPorProcesso', () => {
     );
     expect(prisma.processo.findFirst.mock.calls[0][0].where).toEqual({
       id: 'p1',
-      criadoPorId: 'rep',
+      criadoPor: { instituicao: 'UNDB' },
     });
   });
 
