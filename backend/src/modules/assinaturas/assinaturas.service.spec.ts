@@ -51,6 +51,7 @@ const PROCESSO = {
   supervisorNome: 'Sup Souza',
   supervisorEmail: 'sup@exemplo.com',
   criadoPor: { id: 'rep', nome: 'Rep UNDB', email: 'rep@undb.edu.br' },
+  estagiarios: [{ id: 'e1' }],
   documentos: [TCE('d1', { id: 'e1', nome: 'Ana', email: 'ana@exemplo.com' })],
 };
 
@@ -237,6 +238,7 @@ describe('AssinaturasService.criarSignatarios', () => {
       ...PROCESSO,
       supervisorNome: null,
       supervisorEmail: null,
+      estagiarios: [{ id: 'e2' }],
       documentos: [TCE('d1', null), TCE('d2', { id: 'e2', nome: 'Bia', email: null })],
     });
 
@@ -263,7 +265,36 @@ describe('AssinaturasService.criarSignatarios', () => {
 
     const { corpo } = await respostaDe(service.criarSignatarios(tx as never, 'p1', REPRESENTANTE));
 
-    expect(corpo).toMatchObject({ pendencias: [{ campo: 'tce' }] });
+    expect(corpo).toMatchObject({
+      pendencias: [
+        { campo: 'tce', motivo: 'nenhum TCE enviado no processo' },
+        { campo: 'tce', motivo: 'estagiário sem TCE', estagiarioId: 'e1' },
+      ],
+    });
+  });
+
+  it('exige um TCE por estagiário do processo', async () => {
+    const { service, tx } = montar();
+    const ana = { id: 'e1', nome: 'Ana', email: 'ana@exemplo.com' };
+    tx.processo.findUnique.mockResolvedValue({
+      ...PROCESSO,
+      estagiarios: [{ id: 'e1' }, { id: 'e2' }],
+      documentos: [TCE('d1', ana), TCE('d2', ana)],
+    });
+
+    const { status, corpo } = await respostaDe(
+      service.criarSignatarios(tx as never, 'p1', REPRESENTANTE),
+    );
+
+    expect(status).toBe(400);
+    expect(corpo).toEqual({
+      erro: 'assinatura_incompleta',
+      pendencias: [
+        { campo: 'tce', motivo: 'estagiário com mais de um TCE', estagiarioId: 'e1' },
+        { campo: 'tce', motivo: 'estagiário sem TCE', estagiarioId: 'e2' },
+      ],
+    });
+    expect(tx.signatario.create).not.toHaveBeenCalled();
   });
 
   it('recusa processo fora de aguardando_assinaturas', async () => {

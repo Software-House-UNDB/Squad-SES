@@ -1,6 +1,7 @@
 import { Logger, NotFoundException } from '@nestjs/common';
 import { Perfil } from '../../generated/prisma/enums.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
+import type { StorageService } from '../../storage/storage.service.js';
 import { EstagiariosService } from '../processos/estagiarios.service.js';
 import type { ProcessosService } from '../processos/processos.service.js';
 import { ProcessosService as ProcessosServiceReal } from '../processos/processos.service.js';
@@ -98,6 +99,7 @@ describe('leitura de estagiários registra ACESSO', () => {
         prisma as unknown as PrismaService,
         processos as unknown as ProcessosService,
         auditoria as unknown as AuditoriaService,
+        { remover: vi.fn() } as unknown as StorageService,
       ),
       processosReal: new ProcessosServiceReal(
         prisma as unknown as PrismaService,

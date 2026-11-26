@@ -101,6 +101,7 @@ export class AssinaturasService {
       where: { id: processoId },
       include: {
         criadoPor: { select: { id: true, nome: true, email: true } },
+        estagiarios: { select: { id: true } },
         documentos: {
           where: { tipo: TipoDocumento.termo_compromisso },
           include: {
@@ -138,6 +139,25 @@ export class AssinaturasService {
           campo: 'email',
           motivo: 'e-mail do estagiário não informado',
           estagiarioId: documento.estagiario.id,
+        });
+      }
+    }
+    // Um TCE por estagiário (POST /processos/:id/tces gera todos de uma vez):
+    // sem isso, um estagiário ficaria sem termo e o processo concluiria assim.
+    const tcesPorEstagiario = new Map<string, number>();
+    for (const documento of processo.documentos) {
+      if (documento.estagiario) {
+        const id = documento.estagiario.id;
+        tcesPorEstagiario.set(id, (tcesPorEstagiario.get(id) ?? 0) + 1);
+      }
+    }
+    for (const { id } of processo.estagiarios) {
+      const quantidade = tcesPorEstagiario.get(id) ?? 0;
+      if (quantidade !== 1) {
+        pendencias.push({
+          campo: 'tce',
+          motivo: quantidade === 0 ? 'estagiário sem TCE' : 'estagiário com mais de um TCE',
+          estagiarioId: id,
         });
       }
     }
