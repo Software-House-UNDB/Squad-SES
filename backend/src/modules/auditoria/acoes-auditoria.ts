@@ -22,6 +22,8 @@ export const ACOES_AUDITORIA = [
   'ACESSO',
   // URL assinada de documento gerada (abrir/baixar o PDF), logado ou pelo link de assinatura.
   'DOWNLOAD',
+  // Lembrete do cron a quem ainda não assinou (sem usuário: ação do sistema).
+  'LEMBRETE',
 ] as const;
 
 export type AcaoAuditoria = (typeof ACOES_AUDITORIA)[number];

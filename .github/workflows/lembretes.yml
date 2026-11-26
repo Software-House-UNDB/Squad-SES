@@ -1,0 +1,47 @@
+name: Lembretes diários
+
+# Dispara o job de lembretes de assinatura na API (POST /interno/lembretes).
+# No Render free a API dorme depois de 15 min sem acesso, e o node-cron de
+# dentro dela pode não rodar: esta chamada acorda a API e executa o job.
+# O job é idempotente: rodar de novo no mesmo dia não manda e-mail repetido,
+# e em fim de semana ou feriado ele não envia nada.
+#
+# Secrets do repositório (Settings → Secrets and variables → Actions):
+#   LEMBRETES_URL   URL base da API, ex.: https://squad-ses-api.onrender.com
+#   LEMBRETES_TOKEN o mesmo valor de LEMBRETES_TOKEN no Render
+# Sem eles, o workflow avisa e termina sem erro.
+
+on:
+  schedule:
+    # 11:00 UTC = 08:00 em São Luís (UTC-3), de segunda a sexta.
+    - cron: '0 11 * * 1-5'
+  workflow_dispatch:
+
+concurrency:
+  group: lembretes
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  disparar:
+    name: Disparar lembretes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Chamar a API
+        env:
+          LEMBRETES_URL: ${{ secrets.LEMBRETES_URL }}
+          LEMBRETES_TOKEN: ${{ secrets.LEMBRETES_TOKEN }}
+        run: |
+          if [ -z "$LEMBRETES_URL" ] || [ -z "$LEMBRETES_TOKEN" ]; then
+            echo "::warning::LEMBRETES_URL ou LEMBRETES_TOKEN não configurados; nada a fazer."
+            exit 0
+          fi
+          # A primeira requisição acorda a API (cold start de até ~1 min no free).
+          curl -fsS --retry 6 --retry-delay 20 --retry-all-errors --max-time 120 \
+            -o /dev/null "${LEMBRETES_URL%/}/health"
+          curl -fsS --retry 3 --retry-delay 20 --retry-all-errors --max-time 120 \
+            -X POST -H "Authorization: Bearer ${LEMBRETES_TOKEN}" \
+            "${LEMBRETES_URL%/}/interno/lembretes"
+          echo

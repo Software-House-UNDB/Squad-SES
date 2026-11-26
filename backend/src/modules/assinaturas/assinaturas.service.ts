@@ -29,7 +29,12 @@ import { AuditoriaService } from '../auditoria/auditoria.service.js';
 import { escopoProcesso } from '../auth/escopo-processo.js';
 import type { UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import { formatarCodigo, gerarCodigoValidacao } from './codigo-validacao.js';
-import { emailCodigoOtp, emailLinkAssinatura } from './emails.js';
+import {
+  emailCodigoOtp,
+  emailLembreteAssinatura,
+  emailLembreteRepresentante,
+  emailLinkAssinatura,
+} from './emails.js';
 import { FORMATO_TOKEN, gerarOtp, gerarToken, hashToken, mascararEmail } from './tokens.js';
 
 export const LINK_VALIDADE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -48,7 +53,12 @@ type DadosSignatario = {
   estagiarioId?: string;
 };
 
-type SignatarioParaLink = { id: string; nome: string; email: string; papel: PapelSignatario };
+export type SignatarioParaLink = {
+  id: string;
+  nome: string;
+  email: string;
+  papel: PapelSignatario;
+};
 
 const INCLUIR_NO_LINK = {
   assinatura: { select: { id: true } },
@@ -333,6 +343,20 @@ export class AssinaturasService {
       }),
     );
     return { signatarioId: id, linkExpiraEm };
+  }
+
+  // Lembrete do cron (LembretesService) para quem ainda não assinou. Quem
+  // assina por link recebe um link novo (o anterior deixa de valer, como no
+  // reenviarLink); o representante da UNDB recebe só o endereço do sistema.
+  async enviarLembrete(signatario: SignatarioParaLink) {
+    if (signatario.papel === PapelSignatario.REPRESENTANTE_UNDB) {
+      await this.email.enviar({
+        para: signatario.email,
+        ...emailLembreteRepresentante({ nome: signatario.nome, url: this.urlDoFrontend() }),
+      });
+      return;
+    }
+    await this.emitirLink(signatario, emailLembreteAssinatura);
   }
 
   // Página pública do link: diz quem deve assinar o quê, sem pedir login.
@@ -682,7 +706,10 @@ export class AssinaturasService {
 
   // O token novo vale a partir do UPDATE; linkEnviadoEm só é gravado depois
   // do envio, para uma falha de e-mail não marcar o link como enviado.
-  private async emitirLink(signatario: SignatarioParaLink): Promise<Date> {
+  private async emitirLink(
+    signatario: SignatarioParaLink,
+    conteudo: typeof emailLinkAssinatura = emailLinkAssinatura,
+  ): Promise<Date> {
     const { token, hash } = gerarToken();
     const expiraEm = new Date(Date.now() + LINK_VALIDADE_MS);
     await this.prisma.signatario.update({
@@ -697,7 +724,7 @@ export class AssinaturasService {
     });
     await this.email.enviar({
       para: signatario.email,
-      ...emailLinkAssinatura({
+      ...conteudo({
         nome: signatario.nome,
         papel: signatario.papel,
         url: this.urlDoLink(token),
@@ -712,11 +739,11 @@ export class AssinaturasService {
   }
 
   private urlDoLink(token: string): string {
-    const base = (this.config.get<string>('FRONTEND_URL') || 'http://localhost:5173').replace(
-      /\/+$/,
-      '',
-    );
-    return `${base}/assinar/${token}`;
+    return `${this.urlDoFrontend()}/assinar/${token}`;
+  }
+
+  private urlDoFrontend(): string {
+    return (this.config.get<string>('FRONTEND_URL') || 'http://localhost:5173').replace(/\/+$/, '');
   }
 
   // O diretor da ESP-MA é sempre a mesma pessoa: vem da configuração.

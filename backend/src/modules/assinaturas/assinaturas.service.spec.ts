@@ -529,6 +529,47 @@ describe('AssinaturasService.reenviarLinksPendentes', () => {
   });
 });
 
+describe('AssinaturasService.enviarLembrete', () => {
+  const CONFIG_FRONT = { ...CONFIG, FRONTEND_URL: 'https://ses.exemplo/' };
+
+  it('quem assina por link recebe link novo no e-mail de lembrete', async () => {
+    const { service, prisma, email } = montar(CONFIG_FRONT);
+
+    await service.enviarLembrete({
+      id: 's1',
+      nome: 'Sup Souza',
+      email: 'sup@exemplo.com',
+      papel: PapelSignatario.SUPERVISOR,
+    });
+
+    // Token novo antes do envio; linkEnviadoEm depois.
+    expect(prisma.signatario.update.mock.calls[0][0].data).toHaveProperty('tokenHash');
+    expect(prisma.signatario.update.mock.calls[1][0].data).toHaveProperty('linkEnviadoEm');
+    const mensagem = email.enviar.mock.calls[0][0];
+    expect(mensagem.para).toBe('sup@exemplo.com');
+    expect(mensagem.assunto).toMatch(/^Lembrete:/);
+    expect(mensagem.texto).toMatch(/https:\/\/ses\.exemplo\/assinar\/\S+/);
+    expect(mensagem.texto).toContain('os links de e-mails anteriores deixaram de valer');
+  });
+
+  it('o representante da UNDB recebe só o endereço do sistema, sem link', async () => {
+    const { service, prisma, email } = montar(CONFIG_FRONT);
+
+    await service.enviarLembrete({
+      id: 's4',
+      nome: 'Rep UNDB',
+      email: 'rep@undb.edu.br',
+      papel: PapelSignatario.REPRESENTANTE_UNDB,
+    });
+
+    expect(prisma.signatario.update).not.toHaveBeenCalled();
+    const mensagem = email.enviar.mock.calls[0][0];
+    expect(mensagem.para).toBe('rep@undb.edu.br');
+    expect(mensagem.texto).toContain('https://ses.exemplo');
+    expect(mensagem.texto).not.toContain('/assinar/');
+  });
+});
+
 describe('AssinaturasService.reenviarLink', () => {
   it('gera link novo e audita sem o token', async () => {
     const { service, prisma, email, auditoria } = montar();
