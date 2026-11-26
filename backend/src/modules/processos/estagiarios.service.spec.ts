@@ -54,7 +54,7 @@ function montar(gravado: Gravado = {}, documentos: Doc[] = []) {
     $transaction: (operacao: (cliente: typeof tx) => unknown) => operacao(tx),
   } as unknown as PrismaService;
   const processos = { obterEditavel: vi.fn() } as unknown as ProcessosService;
-  const auditoria = { registrar: vi.fn() };
+  const auditoria = { registrar: vi.fn(), registrarAcesso: vi.fn() };
   const storage = { remover: vi.fn() };
   const service = new EstagiariosService(
     prisma,
