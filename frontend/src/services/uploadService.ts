@@ -1,8 +1,15 @@
 import axios from 'axios';
 import { api } from './api.ts';
-import { ArquivoRepetidoError } from './processoService.ts';
 import type { TipoDocumento } from '../pages/NovoProcesso/pacote.ts';
 import type { TipoRetorno } from '../domain/retorno.ts';
+
+/** A API respondeu 409: o mesmo arquivo (mesmo SHA-256) já foi enviado neste processo. */
+export class ArquivoRepetidoError extends Error {
+  constructor() {
+    super('arquivo repetido no processo');
+    this.name = 'ArquivoRepetidoError';
+  }
+}
 
 /** A API recusou o arquivo (400/413/415): vazio, grande demais ou não é PDF. `motivo` vem da API. */
 export class ArquivoRecusadoError extends Error {

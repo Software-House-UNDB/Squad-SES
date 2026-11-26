@@ -3,7 +3,12 @@ import { CircleCheck, FilePlus2 } from 'lucide-react';
 import PageHeader from '../../components/layout/PageHeader.tsx';
 import Badge from '../../components/ui/Badge.tsx';
 import Toast from '../../components/ui/Toast.tsx';
-import { ArquivoRepetidoError, enviarProcesso } from '../../services/processoService.ts';
+import {
+  ArquivoRepetidoError,
+  enviarProcesso,
+  novaRetomada,
+  UploadsIncompletosError,
+} from '../../services/processoService.ts';
 import type { Arquivo } from './ArquivoSlot.tsx';
 import DadosDoProcesso from './DadosDoProcesso.tsx';
 import LoteEstagiarios from './LoteEstagiarios.tsx';
@@ -16,6 +21,7 @@ import {
 } from './pacote.ts';
 import PacoteDocumentos from './PacoteDocumentos.tsx';
 import ResumoProcesso from './ResumoProcesso.tsx';
+import { useUploads } from './useUploads.ts';
 import {
   ESTAGIARIO_VAZIO,
   PROCESSO_VAZIO,
@@ -27,6 +33,9 @@ import {
   type ProcessoForm,
 } from './validacao.ts';
 import './novoProcesso.css';
+
+const MSG_UPLOADS_INCOMPLETOS =
+  'Alguns arquivos não foram enviados. O motivo aparece em cada documento; os que já subiram não se perdem. Corrija e envie de novo.';
 
 const MSG_ERRO_ENVIO =
   'Não foi possível enviar o processo. Nada foi perdido: confira a conexão e tente de novo.';
@@ -52,6 +61,10 @@ export default function NovoProcesso() {
   const [envio, setEnvio] = useState<Envio>('editando');
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
+
+  const uploads = useUploads();
+  // O que já existe no servidor (processo, estagiários, arquivos): uma nova tentativa só faz o que falta.
+  const retomada = useRef(novaRetomada());
 
   const uid = useId();
   const nomeRef = useRef<HTMLInputElement>(null);
@@ -101,6 +114,7 @@ export default function NovoProcesso() {
     const doEstagiario = Object.fromEntries(
       Object.entries(anexos).filter(([chave]) => chave.startsWith(`${removido.cpf}|`)),
     );
+    Object.keys(doEstagiario).forEach(esquecerEnvio);
     setEstagiarios((lista) => lista.filter((_, i) => i !== indice));
     setAnexos((atual) =>
       Object.fromEntries(Object.entries(atual).filter(([chave]) => !(chave in doEstagiario))),
@@ -120,6 +134,12 @@ export default function NovoProcesso() {
     });
   }
 
+  /** O arquivo do slot mudou ou saiu: aborta o envio em andamento e esquece o estado de envio dele. */
+  function esquecerEnvio(chave: string) {
+    uploads.limpar(chave);
+    retomada.current.enviados.delete(chave);
+  }
+
   async function anexar(chave: string, arquivo: File) {
     let problema = validarArquivo(arquivo);
     const hash = problema ? null : await hashDoArquivo(arquivo);
@@ -128,6 +148,7 @@ export default function NovoProcesso() {
       problema = MSG_ARQUIVO_REPETIDO;
     }
     if (!montado.current) return;
+    if (!problema) esquecerEnvio(chave);
     setErrosArquivo((atual) => {
       const { [chave]: _antigo, ...resto } = atual;
       return problema ? { ...resto, [chave]: problema } : resto;
@@ -135,12 +156,13 @@ export default function NovoProcesso() {
     if (!problema) {
       setAnexos((atual) => ({
         ...atual,
-        [chave]: { nome: arquivo.name, tamanho: arquivo.size, hash: hash ?? undefined },
+        [chave]: { nome: arquivo.name, tamanho: arquivo.size, hash: hash ?? undefined, arquivo },
       }));
     }
   }
 
   function remover(chave: string) {
+    esquecerEnvio(chave);
     setAnexos((atual) => {
       const { [chave]: _removido, ...resto } = atual;
       return resto;
@@ -159,12 +181,21 @@ export default function NovoProcesso() {
     setErroEnvio(null);
     setEnvio('enviando');
     try {
-      await enviarProcesso();
+      const arquivos = Object.fromEntries(
+        Object.entries(anexos).flatMap(([chave, a]) => (a.arquivo ? [[chave, a.arquivo]] : [])),
+      );
+      await enviarProcesso({ processo, estagiarios, arquivos }, retomada.current, uploads.enviar);
       if (montado.current) setEnvio('enviado');
     } catch (e) {
       if (!montado.current) return;
       setEnvio('editando');
-      setErroEnvio(e instanceof ArquivoRepetidoError ? MSG_ARQUIVO_REPETIDO : MSG_ERRO_ENVIO);
+      setErroEnvio(
+        e instanceof UploadsIncompletosError
+          ? MSG_UPLOADS_INCOMPLETOS
+          : e instanceof ArquivoRepetidoError
+            ? MSG_ARQUIVO_REPETIDO
+            : MSG_ERRO_ENVIO,
+      );
     }
   }
 
@@ -187,6 +218,8 @@ export default function NovoProcesso() {
     setAnexos({});
     setErrosArquivo({});
     setErroEnvio(null);
+    Object.keys(anexos).forEach(esquecerEnvio);
+    retomada.current = novaRetomada();
     setEnvio('editando');
   }
 
@@ -247,6 +280,9 @@ export default function NovoProcesso() {
             total={todos.length}
             completos={completos}
             id={id}
+            envios={uploads.estados}
+            onCancelarEnvio={uploads.cancelar}
+            onTentarDeNovo={uploads.tentarDeNovo}
             onAnexar={anexar}
             onRemover={remover}
           />
