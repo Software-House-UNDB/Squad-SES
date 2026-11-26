@@ -260,6 +260,18 @@ describe('PATCH /processos/:id/estagiarios/:id', () => {
       .send({ curso: 'X' })
       .expect(403);
   });
+
+  it('a coordenação não cadastra estagiário (403 perfil_nao_autorizado, RBAC #53)', async () => {
+    const processoId = await novoProcesso();
+
+    const { body } = await coordenacao
+      .post(`/processos/${processoId}/estagiarios`)
+      .send(estagiario({ cpf: CPFS[2] }))
+      .expect(403);
+
+    expect(body).toMatchObject({ erro: 'perfil_nao_autorizado' });
+    expect(await prisma.estagiario.count({ where: { processoId } })).toBe(0);
+  });
 });
 
 describe('DELETE /processos/:id/estagiarios/:id', () => {

@@ -11,7 +11,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Perfil } from '../../generated/prisma/enums.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { Perfis } from '../auth/perfis.decorator.js';
+import { PerfisGuard } from '../auth/perfis.guard.js';
 import { UsuarioAtual, type UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import { AssinaturasService } from './assinaturas.service.js';
 import { AssinarLogadoDto, AssinarPorLinkDto } from './dto/assinar.dto.js';
@@ -67,7 +70,8 @@ export class AssinaturasController {
   @Post('signatarios/:id/assinar')
   @HttpCode(201)
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PerfisGuard)
+  @Perfis(Perfil.REPRESENTANTE_UNDB)
   assinarLogado(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AssinarLogadoDto,
@@ -92,7 +96,8 @@ export class AssinaturasController {
   @Post('processos/:processoId/iniciar')
   @HttpCode(200)
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PerfisGuard)
+  @Perfis(Perfil.COORDENACAO_SES)
   iniciar(
     @Param('processoId', ParseUUIDPipe) processoId: string,
     @UsuarioAtual() usuario: UsuarioAutenticado,
