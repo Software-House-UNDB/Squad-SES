@@ -8,6 +8,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import type { UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import { AuditoriaService } from '../auditoria/auditoria.service.js';
+import { registrosDeAcesso } from '../auditoria/acesso-estagiarios.js';
 import { AtualizarEstagiarioDto, CriarEstagiarioDto } from './dto/estagiario.dto.js';
 import { duplicadosNoProcesso, lerLote, loteInvalido } from './lote-estagiarios.js';
 import { ProcessosService } from './processos.service.js';
@@ -46,15 +47,19 @@ export class EstagiariosService {
 
   async listar(processoId: string, usuario: UsuarioAutenticado) {
     await this.processos.garantirAcesso(processoId, usuario);
-    return this.prisma.estagiario.findMany({
+    const estagiarios = await this.prisma.estagiario.findMany({
       where: { processoId },
       orderBy: { nome: 'asc' },
     });
+    await this.auditoria.registrarAcesso(usuario, registrosDeAcesso(estagiarios, processoId));
+    return estagiarios;
   }
 
   async buscar(processoId: string, id: string, usuario: UsuarioAutenticado) {
     await this.processos.garantirAcesso(processoId, usuario);
-    return this.obter(this.prisma, processoId, id);
+    const estagiario = await this.obter(this.prisma, processoId, id);
+    await this.auditoria.registrarAcesso(usuario, registrosDeAcesso([estagiario], processoId));
+    return estagiario;
   }
 
   criar(processoId: string, dto: CriarEstagiarioDto, usuario: UsuarioAutenticado) {

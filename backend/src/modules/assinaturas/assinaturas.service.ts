@@ -411,10 +411,24 @@ export class AssinaturasService {
 
   // URL temporária do PDF para quem tem o link e o código (RF-14: a tela só
   // libera o botão de assinar depois de o PDF ser lido até o fim).
-  async urlDocumentoPorLink(token: string, codigo: string) {
+  async urlDocumentoPorLink(token: string, codigo: string, evidencia: EvidenciaRequisicao) {
     const signatario = await this.carregarLink(token);
     await this.conferirOtp(signatario, codigo);
     const { documento } = signatario;
+    // Signatário de fora não tem usuário: a auditoria guarda quem pelo signatário.
+    await this.auditoria.registrarAcesso(
+      { ip: evidencia.ip },
+      {
+        acao: 'DOWNLOAD',
+        entidade: 'documento',
+        entidadeId: documento.id,
+        dadosDepois: {
+          signatarioId: signatario.id,
+          papel: signatario.papel,
+          userAgent: evidencia.userAgent,
+        },
+      },
+    );
     const url = await this.storage.urlAssinada(
       documento.storageKey,
       documento.nomeArquivo,

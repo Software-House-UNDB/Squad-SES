@@ -33,7 +33,7 @@ function montar(gravado: { menorIdade: boolean; responsavelNome: string | null }
     $transaction: (operacao: (cliente: typeof tx) => unknown) => operacao(tx),
   } as unknown as PrismaService;
   const processos = { obterEditavel: vi.fn() } as unknown as ProcessosService;
-  const auditoria = { registrar: vi.fn() } as unknown as AuditoriaService;
+  const auditoria = { registrar: vi.fn(), registrarAcesso: vi.fn() } as unknown as AuditoriaService;
   return { tx, service: new EstagiariosService(prisma, processos, auditoria) };
 }
 
