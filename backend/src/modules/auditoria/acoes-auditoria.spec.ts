@@ -15,6 +15,7 @@ describe('lista canônica de auditoria.acao', () => {
         'DELETE',
         'IMPORT_LOTE',
         'RETORNO_COORDENACAO',
+        'TRANSICAO',
         'UPDATE',
       ].sort(),
     );

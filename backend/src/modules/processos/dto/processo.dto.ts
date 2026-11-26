@@ -59,6 +59,20 @@ export class AnalisarProcessoDto {
   observacaoAnalise: string | null;
 }
 
+// em_analise -> pendencia: o motivo é obrigatório e vira a observacaoAnalise.
+export class ApontarPendenciaDto {
+  @ApiProperty({
+    maxLength: 2000,
+    description: 'O que o representante precisa corrigir antes de reenviar.',
+    example: 'A apólice está vencida. Envie a vigente.',
+  })
+  @Transform(aparar)
+  @IsString({ message: 'motivo é obrigatório' })
+  @IsNotEmpty({ message: 'motivo é obrigatório' })
+  @MaxLength(2000, { message: 'motivo passa de 2000 caracteres' })
+  motivo: string;
+}
+
 export class ListarProcessosDto {
   @ApiPropertyOptional({ enum: StatusProcesso, enumName: 'StatusProcesso' })
   @IsOptional()

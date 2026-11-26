@@ -7,6 +7,9 @@ export const ACOES_AUDITORIA = [
   'IMPORT_LOTE',
   // Coordenação SES registra a observação de análise (PATCH /processos/:id/analise).
   'ANALISE',
+  // Mudança de status pela máquina de estados (RF-07): enviar, iniciar análise,
+  // apontar pendência, aprovar. dadosAntes/dadosDepois trazem o status.
+  'TRANSICAO',
   // Coordenação SES anexa documento de retorno (ofício carimbado, kit de estágio...).
   'RETORNO_COORDENACAO',
   // Ato de assinar (RF-15), uma por signatário.
