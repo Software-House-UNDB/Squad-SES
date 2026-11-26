@@ -2,6 +2,7 @@ import { FileCheck2, FolderOpen } from 'lucide-react';
 import Badge from '../../components/ui/Badge.tsx';
 import ArquivoSlot, { type Arquivo } from './ArquivoSlot.tsx';
 import { DOCS_DO_PROCESSO, docsDoEstagiario } from './pacote.ts';
+import type { EstadoUpload } from './useUploads.ts';
 import type { EstagiarioForm } from './validacao.ts';
 
 interface Props {
@@ -12,6 +13,10 @@ interface Props {
   total: number;
   completos: number;
   id: (nome: string) => string;
+  /** Andamento do envio de cada slot ao servidor, pela chave do slot. */
+  envios?: Record<string, EstadoUpload>;
+  onCancelarEnvio?: (chave: string) => void;
+  onTentarDeNovo?: (chave: string) => void;
   onAnexar: (chave: string, arquivo: File) => void;
   onRemover: (chave: string) => void;
 }
@@ -24,6 +29,9 @@ export default function PacoteDocumentos({
   total,
   completos,
   id,
+  envios = {},
+  onCancelarEnvio,
+  onTentarDeNovo,
   onAnexar,
   onRemover,
 }: Props) {
@@ -67,6 +75,9 @@ export default function PacoteDocumentos({
             rotulo={d.rotulo}
             arquivo={anexos[d.chave]}
             erro={errosArquivo[d.chave]}
+            envio={envios[d.chave]}
+            onCancelarEnvio={() => onCancelarEnvio?.(d.chave)}
+            onTentarDeNovo={() => onTentarDeNovo?.(d.chave)}
             onEscolher={(f) => onAnexar(d.chave, f)}
             onRemover={() => onRemover(d.chave)}
           />
@@ -87,6 +98,9 @@ export default function PacoteDocumentos({
                   rotulo={d.rotulo}
                   arquivo={anexos[d.chave]}
                   erro={errosArquivo[d.chave]}
+                  envio={envios[d.chave]}
+                  onCancelarEnvio={() => onCancelarEnvio?.(d.chave)}
+                  onTentarDeNovo={() => onTentarDeNovo?.(d.chave)}
                   onEscolher={(f) => onAnexar(d.chave, f)}
                   onRemover={() => onRemover(d.chave)}
                 />

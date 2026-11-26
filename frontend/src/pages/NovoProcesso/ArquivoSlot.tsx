@@ -9,6 +9,8 @@ export interface Arquivo {
   tamanho: number;
   /** SHA-256 do conteúdo; o backend recusa o mesmo arquivo duas vezes no processo (409). */
   hash?: string;
+  /** O arquivo escolhido, guardado para o envio ao servidor. */
+  arquivo?: File;
 }
 
 interface ArquivoSlotProps {

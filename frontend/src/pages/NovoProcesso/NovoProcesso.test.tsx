@@ -2,7 +2,13 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearSession } from '../../auth/session.ts';
-import { ArquivoRepetidoError, enviarProcesso } from '../../services/processoService.ts';
+import {
+  ArquivoRepetidoError,
+  enviarProcesso,
+  UploadsIncompletosError,
+} from '../../services/processoService.ts';
+import { UploadCanceladoError, UploadFalhouError } from '../../services/uploadService.ts';
+import { MSG_FALHA_UPLOAD } from './useUploads.ts';
 import { loginAs, renderApp } from '../../test-utils.tsx';
 
 // O envio real (API) ainda não existe; aqui ele é controlado pelo teste.
@@ -528,6 +534,87 @@ describe('Novo processo de documentação', () => {
       await waitFor(() => expect(enviarMock).toHaveBeenCalled());
       expect(erro).not.toHaveBeenCalled();
       erro.mockRestore();
+    });
+  });
+
+  describe('envio de cada arquivo', () => {
+    it('entrega à API os dados do processo, do lote e o arquivo de cada slot', async () => {
+      abrir();
+      await adicionar(ANA);
+      await completarPacoteDeUmEstagiario();
+      await userEvent.click(botaoEnviar());
+      await screen.findByRole('heading', { name: 'Processo enviado' });
+
+      const [dados] = enviarMock.mock.calls[0];
+      expect(dados.processo).toMatchObject({ tipoEstagio: 'obrigatorio', supervisorNome: 'Maria Supervisora' });
+      expect(dados.estagiarios.map((e) => e.nome)).toEqual(['Ana Souza']);
+      expect(Object.keys(dados.arquivos).sort()).toEqual(
+        ['apolice', 'lista_indicados', 'plano_atividades', '529.982.247-25|documento_pessoal'].sort(),
+      );
+      expect(dados.arquivos.apolice).toBeInstanceOf(File);
+    });
+
+    it('mostra o progresso do arquivo e permite cancelar o envio dele', async () => {
+      enviarMock.mockImplementation(async (_dados, _retomada, executar) => {
+        const ok = await executar(
+          'apolice',
+          ({ onProgresso, signal }) =>
+            new Promise((_, rejeitar) => {
+              onProgresso(40);
+              signal.addEventListener('abort', () => rejeitar(new UploadCanceladoError()));
+            }),
+        );
+        if (!ok) throw new UploadsIncompletosError();
+      });
+      abrir();
+      await adicionar(ANA);
+      await completarPacoteDeUmEstagiario();
+      await userEvent.click(botaoEnviar());
+
+      expect(await screen.findByRole('progressbar', { name: 'Enviando Apólice de seguro' })).toHaveValue(40);
+      await userEvent.click(screen.getByRole('button', { name: 'Cancelar envio' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(/Alguns arquivos não foram enviados/);
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      expect(botaoEnviar()).toBeEnabled();
+    });
+
+    it('uma falha no arquivo aparece nele, com "Tentar de novo", e o resto do pacote segue anexado', async () => {
+      let tentativas = 0;
+      enviarMock.mockImplementation(async (_dados, _retomada, executar) => {
+        const ok = await executar('apolice', async () => {
+          if (tentativas++ === 0) throw new UploadFalhouError();
+        });
+        if (!ok) throw new UploadsIncompletosError();
+      });
+      abrir();
+      await adicionar(ANA);
+      await completarPacoteDeUmEstagiario();
+      await userEvent.click(botaoEnviar());
+
+      const slot = (await screen.findByText(MSG_FALHA_UPLOAD)).closest('li') as HTMLElement;
+      expect(slot).toHaveTextContent('Apólice de seguro');
+      expect(screen.getAllByText('doc.pdf', { selector: '.np-arquivo__nome' })).toHaveLength(4);
+
+      await userEvent.click(within(slot).getByRole('button', { name: 'Tentar de novo' }));
+      await waitFor(() => expect(screen.queryByText(MSG_FALHA_UPLOAD)).not.toBeInTheDocument());
+      expect(tentativas).toBe(2);
+    });
+
+    it('o 409 de um arquivo explica o motivo no próprio documento', async () => {
+      enviarMock.mockImplementation(async (_dados, _retomada, executar) => {
+        const ok = await executar('plano_atividades', () => Promise.reject(new ArquivoRepetidoError()));
+        if (!ok) throw new UploadsIncompletosError();
+      });
+      abrir();
+      await adicionar(ANA);
+      await completarPacoteDeUmEstagiario();
+      await userEvent.click(botaoEnviar());
+
+      const slot = (await screen.findAllByText(/já foi anexado em outro documento/))
+        .map((el) => el.closest('li'))
+        .find(Boolean) as HTMLElement;
+      expect(slot).toHaveTextContent('Plano de atividades');
     });
   });
 
