@@ -19,6 +19,7 @@ const DOCUMENTO = {
   id: 'd1',
   processoId: 'p1',
   nomeArquivo: 'termo.pdf',
+  tipo: TipoDocumento.termo_compromisso,
   mimeType: 'application/pdf',
   storageKey: 'processos/p1/chave.pdf',
   enviadoPorId: 'u1',
@@ -56,7 +57,7 @@ function montar() {
     obterParaRetorno: vi.fn(),
     garantirAcesso: vi.fn(),
   };
-  const auditoria = { registrar: vi.fn() };
+  const auditoria = { registrar: vi.fn(), registrarAcesso: vi.fn() };
   const service = new DocumentosService(
     prisma as unknown as PrismaService,
     storage as unknown as StorageService,
@@ -191,10 +192,17 @@ describe('DocumentosService.enviar', () => {
 
 describe('DocumentosService.gerarUrl', () => {
   it('confere o acesso e devolve URL com validade de 5 minutos', async () => {
-    const { storage, processos, service } = montar();
+    const { storage, processos, auditoria, service } = montar();
     const antes = Date.now();
 
     const { url, expiraEm } = await service.gerarUrl('p1', 'd1', USUARIO);
+
+    expect(auditoria.registrarAcesso).toHaveBeenCalledExactlyOnceWith(USUARIO, {
+      acao: 'DOWNLOAD',
+      entidade: 'documento',
+      entidadeId: DOCUMENTO.id,
+      dadosDepois: { processoId: 'p1', tipo: TipoDocumento.termo_compromisso },
+    });
 
     expect(processos.garantirAcesso).toHaveBeenCalledWith('p1', USUARIO);
     expect(url).toBe('https://storage/assinada');
@@ -208,10 +216,11 @@ describe('DocumentosService.gerarUrl', () => {
   });
 
   it('responde 404 para documento de outro processo', async () => {
-    const { tx, service } = montar();
+    const { tx, auditoria, service } = montar();
     tx.documento.findFirst.mockResolvedValue(null);
 
     await expect(service.gerarUrl('p1', 'd9', USUARIO)).rejects.toBeInstanceOf(NotFoundException);
+    expect(auditoria.registrarAcesso).not.toHaveBeenCalled();
   });
 });
 

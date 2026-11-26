@@ -11,11 +11,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { UsuarioAtual, type UsuarioAutenticado } from '../auth/usuario-atual.decorator.js';
 import {
   AnalisarProcessoDto,
+  ApontarPendenciaDto,
   AtualizarProcessoDto,
   CriarProcessoDto,
   ListarProcessosDto,
@@ -60,6 +61,57 @@ export class ProcessosController {
     @UsuarioAtual() usuario: UsuarioAutenticado,
   ) {
     return this.processos.analisar(id, dto, usuario);
+  }
+
+  // --- Máquina de estados (RF-07) ---
+
+  @Post(':id/enviar')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Envia o processo à coordenação (rascunho → enviado; pendencia → enviado no reenvio)',
+    description:
+      'Representante UNDB. 409 se o status atual não permite o envio; 400 (pacote_incompleto) ' +
+      'com a lista de pendências se faltar estagiário ou documento obrigatório (RF-08).',
+  })
+  enviar(@Param('id', ParseUUIDPipe) id: string, @UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.processos.enviar(id, usuario);
+  }
+
+  @Post(':id/iniciar-analise')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Coordenação assume a análise (enviado → em_analise)' })
+  iniciarAnalise(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+  ) {
+    return this.processos.iniciarAnalise(id, usuario);
+  }
+
+  @Post(':id/pendencia')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Coordenação devolve com pendência (em_analise ou aprovado → pendencia)',
+    description:
+      'O motivo é obrigatório e fica em observacaoAnalise. De aprovado, só antes do ' +
+      'início das assinaturas (depois o status já é aguardando_assinaturas).',
+  })
+  apontarPendencia(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ApontarPendenciaDto,
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+  ) {
+    return this.processos.apontarPendencia(id, dto, usuario);
+  }
+
+  @Post(':id/aprovar')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Coordenação aprova (em_analise → aprovado)',
+    description:
+      'A ida para aguardando_assinaturas é feita em POST /assinaturas/processos/:id/iniciar.',
+  })
+  aprovar(@Param('id', ParseUUIDPipe) id: string, @UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.processos.aprovar(id, usuario);
   }
 
   @Delete(':id')

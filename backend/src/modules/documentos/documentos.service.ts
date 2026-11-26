@@ -110,6 +110,13 @@ export class DocumentosService {
     await this.processos.garantirAcesso(processoId, usuario);
     const documento = await this.obter(this.prisma, processoId, id);
 
+    // Quem abriu/baixou o PDF (RF-23). A URL é a única porta para o arquivo.
+    await this.auditoria.registrarAcesso(usuario, {
+      acao: 'DOWNLOAD',
+      entidade: 'documento',
+      entidadeId: documento.id,
+      dadosDepois: { processoId, tipo: documento.tipo },
+    });
     const expiraEm = new Date(Date.now() + VALIDADE_URL_SEGUNDOS * 1000);
     const url = await this.storage.urlAssinada(
       documento.storageKey,

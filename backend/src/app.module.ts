@@ -8,6 +8,7 @@ import { ProcessosModule } from './modules/processos/processos.module.js';
 import { DocumentosModule } from './modules/documentos/documentos.module.js';
 import { AssinaturasModule } from './modules/assinaturas/assinaturas.module.js';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module.js';
+import { TceModule } from './modules/tce/tce.module.js';
 import { HealthController } from './health/health.controller.js';
 
 @Module({
@@ -19,6 +20,7 @@ import { HealthController } from './health/health.controller.js';
     DocumentosModule,
     AssinaturasModule,
     AuditoriaModule,
+    TceModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

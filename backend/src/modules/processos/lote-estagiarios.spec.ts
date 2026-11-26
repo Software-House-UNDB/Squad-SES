@@ -156,6 +156,37 @@ describe('lerLote', () => {
     expect(invalidos).toEqual([{ linha: 4, campo: 'email', motivo: 'e-mail inválido' }]);
   });
 
+  it('aplica o teto legal da jornada por linha (#79)', async () => {
+    const { validos, invalidos } = await lerLote(
+      csv(
+        'nome,cpf,matricula,curso,horas_por_dia,dias_semana,horario_inicio,horario_fim',
+        'Ana,52998224725,M1,Enfermagem,6,seg|ter|qua|qui|sex,07:00,13:00',
+        'Bia,11144477735,M2,Medicina,8,seg,08:00,18:00',
+        'Caio,39053344705,M3,Medicina,6,seg|ter|qua|qui|sex|sab,07:00,13:00',
+        'Duda,15350946056,M4,Medicina,6,seg,08:00,12:00',
+      ),
+    );
+
+    expect(validos.map(({ dto }) => dto.nome)).toEqual(['Ana']);
+    expect(invalidos).toEqual([
+      {
+        linha: 3,
+        campo: 'horas_por_dia',
+        motivo: 'jornada acima do limite legal de 6 horas diárias',
+      },
+      {
+        linha: 4,
+        campo: 'horas_por_dia',
+        motivo: 'jornada acima do limite legal de 30 horas semanais (36 h)',
+      },
+      {
+        linha: 5,
+        campo: 'horas_por_dia',
+        motivo: '6 h por dia não cabem no horário de 08:00 a 12:00',
+      },
+    ]);
+  });
+
   it('aponta linha com número errado de colunas', async () => {
     const { invalidos } = await lerLote(csv(CABECALHO, 'Ana,52998224725'));
 

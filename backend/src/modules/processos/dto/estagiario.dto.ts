@@ -18,6 +18,7 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
+import { LIMITE_HORAS_DIA, problemasJornada } from '../jornada.js';
 
 export const DIAS_SEMANA = ['seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'];
 
@@ -102,6 +103,25 @@ class InicioAteTermino implements ValidatorConstraintInterface {
   }
 }
 
+// Teto legal da jornada (issue #79): o diário fica no @Max; aqui entram o
+// semanal e o horário, que dependem de outros campos. No PATCH o service
+// confere de novo contra o registro gravado.
+@ValidatorConstraint({ name: 'jornadaDoEstagio' })
+class JornadaDentroDoTeto implements ValidatorConstraintInterface {
+  private motivo(argumentos: ValidationArguments) {
+    const jornada = argumentos.object as CriarEstagiarioDto;
+    return problemasJornada(jornada).find(({ regra }) => regra !== 'diaria')?.motivo;
+  }
+
+  validate(_valor: unknown, argumentos: ValidationArguments) {
+    return !this.motivo(argumentos);
+  }
+
+  defaultMessage(argumentos: ValidationArguments) {
+    return this.motivo(argumentos) ?? 'jornada inválida';
+  }
+}
+
 export class CriarEstagiarioDto {
   @Transform(aparar)
   @IsString({ message: 'nome é obrigatório' })
@@ -183,7 +203,10 @@ export class CriarEstagiarioDto {
   @Type(() => Number)
   @IsInt({ message: 'horas por dia inválidas' })
   @Min(1, { message: 'horas por dia inválidas' })
-  @Max(24, { message: 'horas por dia inválidas' })
+  @Max(LIMITE_HORAS_DIA, {
+    message: `jornada acima do limite legal de ${LIMITE_HORAS_DIA} horas diárias`,
+  })
+  @Validate(JornadaDentroDoTeto)
   horasPorDia?: number;
 
   @IsOptional()

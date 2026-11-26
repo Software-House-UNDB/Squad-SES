@@ -29,7 +29,11 @@ export class JwtAuthGuard implements CanActivate {
         throw new UnauthorizedException('Token de acesso inválido ou expirado');
       });
 
-    requisicao.usuario = { id: payload.sub, perfil: payload.perfil };
+    requisicao.usuario = {
+      id: payload.sub,
+      perfil: payload.perfil,
+      instituicao: payload.instituicao ?? null,
+    };
     return true;
   }
 }
