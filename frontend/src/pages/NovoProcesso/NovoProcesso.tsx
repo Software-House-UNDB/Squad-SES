@@ -68,7 +68,8 @@ export default function NovoProcesso() {
   const anexados = new Set(Object.keys(anexos));
   const todos = exigidos(estagiarios);
   const pendenciasProcesso = Object.values(validarProcesso(processo));
-  const pendencias = [...pendenciasDoPacote(estagiarios, anexados), ...pendenciasProcesso];
+  // As do processo primeiro: o card do processo é o primeiro da página.
+  const pendencias = [...pendenciasProcesso, ...pendenciasDoPacote(estagiarios, anexados)];
   const completos = todos.filter((d) => anexados.has(d.chave)).length;
   const podeEnviar = pendencias.length === 0 && envio === 'editando';
 

@@ -6,6 +6,7 @@ import {
   DIAS_SEMANA,
   formatarCep,
   formatarCpf,
+  LIMITE_HORAS_DIA,
   UFS,
   type ErrosEstagiario,
   type EstagiarioForm,
@@ -174,7 +175,7 @@ export default function LoteEstagiarios({
                 {...aria('horasPorDia')}
                 type="number"
                 min={1}
-                max={24}
+                max={LIMITE_HORAS_DIA}
                 inputMode="numeric"
                 value={rascunho.horasPorDia}
                 onChange={(e) => onCampo('horasPorDia', e.target.value)}
@@ -227,6 +228,8 @@ export default function LoteEstagiarios({
               </span>
               <div
                 className="np-dias"
+                id={id('diasSemana')}
+                tabIndex={-1}
                 role="group"
                 aria-labelledby={id('diasSemana-rotulo')}
                 aria-describedby={erros.diasSemana ? id('diasSemana-erro') : undefined}

@@ -121,6 +121,12 @@ export const ESTAGIARIO_VAZIO: EstagiarioForm = {
 
 export type ErrosEstagiario = Partial<Record<keyof EstagiarioForm, string>>;
 
+/** Teto legal da jornada do estágio no ensino superior (Lei 11.788, art. 10, II). */
+export const LIMITE_HORAS_DIA = 6;
+export const LIMITE_HORAS_SEMANA = 30;
+
+const minutos = (horario: string) => Number(horario.slice(0, 2)) * 60 + Number(horario.slice(3));
+
 /** Valida um estagiário; `existentes` evita CPF, matrícula e e-mail repetidos no mesmo processo. */
 export function validarEstagiario(
   dados: EstagiarioForm,
@@ -148,21 +154,37 @@ export function validarEstagiario(
   if (!dados.periodo.trim() || !Number.isInteger(periodo) || periodo < 1)
     erros.periodo = 'Informe o período do curso (1 ou mais).';
 
+  // A ordem das checagens é a da tela: o foco vai para o primeiro campo com erro.
+  const horas = Number(dados.horasPorDia);
+  if (!dados.horasPorDia.trim() || !Number.isInteger(horas) || horas < 1)
+    erros.horasPorDia = `Informe as horas por dia (de 1 a ${LIMITE_HORAS_DIA}).`;
+  else if (horas > LIMITE_HORAS_DIA)
+    erros.horasPorDia = `A jornada não pode passar de ${LIMITE_HORAS_DIA} horas por dia (Lei 11.788, art. 10).`;
+
   if (!dados.dataInicio) erros.dataInicio = 'Informe a data de início.';
   if (!dados.dataTermino) erros.dataTermino = 'Informe a data de término.';
   else if (dados.dataInicio && dados.dataTermino < dados.dataInicio)
     erros.dataTermino = 'O término não pode ser antes do início.';
 
-  const horas = Number(dados.horasPorDia);
-  if (!dados.horasPorDia.trim() || !Number.isInteger(horas) || horas < 1 || horas > 24)
-    erros.horasPorDia = 'Informe as horas por dia (de 1 a 24).';
-
-  if (dados.diasSemana.length === 0) erros.diasSemana = 'Marque ao menos um dia da semana.';
-
   if (!HORARIO.test(dados.horarioInicio)) erros.horarioInicio = 'Informe o horário de início.';
   if (!HORARIO.test(dados.horarioFim)) erros.horarioFim = 'Informe o horário de fim.';
   else if (HORARIO.test(dados.horarioInicio) && dados.horarioFim <= dados.horarioInicio)
     erros.horarioFim = 'O fim deve ser depois do início.';
+
+  const dias = new Set(dados.diasSemana).size;
+  if (dias === 0) erros.diasSemana = 'Marque ao menos um dia da semana.';
+
+  // Teto legal da jornada (Lei 11.788, art. 10, II): a mesma regra do backend
+  // (processos/jornada.ts). Igualdade permitida: 6 h × 5 dias = 30 h passa.
+  if (!erros.horasPorDia) {
+    if (!erros.horarioInicio && !erros.horarioFim) {
+      const janela = minutos(dados.horarioFim) - minutos(dados.horarioInicio);
+      if (horas * 60 > janela)
+        erros.horasPorDia = `${horas} h por dia não cabem no horário de ${dados.horarioInicio} a ${dados.horarioFim}.`;
+    }
+    if (!erros.horasPorDia && !erros.diasSemana && horas * dias > LIMITE_HORAS_SEMANA)
+      erros.horasPorDia = `A jornada não pode passar de ${LIMITE_HORAS_SEMANA} horas por semana (hoje: ${horas * dias} h).`;
+  }
 
   if (!dados.cidade.trim()) erros.cidade = 'Informe a cidade.';
   if (!(UFS as readonly string[]).includes(dados.uf)) erros.uf = 'Escolha a UF.';

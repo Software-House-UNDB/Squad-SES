@@ -92,6 +92,7 @@ describe('estagiário do lote (RF-06)', () => {
 
   it.each([
     ['horasPorDia', '0'],
+    ['horasPorDia', '7'],
     ['horasPorDia', '25'],
     ['horasPorDia', '2.5'],
     ['periodo', '0'],
@@ -99,6 +100,31 @@ describe('estagiário do lote (RF-06)', () => {
     ['cep', '65000-00'],
   ] as const)('recusa %s = %s', (campo, valor) => {
     expect(validarEstagiario({ ...valido, [campo]: valor })[campo]).toBeDefined();
+  });
+
+  it('teto legal da jornada: 6 h/dia, 30 h/semana e as horas cabendo no horário', () => {
+    const cinco = ['seg', 'ter', 'qua', 'qui', 'sex'];
+    // Limite exato passa: 6 h × 5 dias = 30 h, em 08:00–14:00.
+    expect(validarEstagiario({ ...valido, diasSemana: cinco })).toEqual({});
+    expect(
+      validarEstagiario({ ...valido, horasPorDia: '7', horarioFim: '15:00' }).horasPorDia,
+    ).toMatch(/6 horas por dia/);
+    expect(validarEstagiario({ ...valido, diasSemana: [...cinco, 'sab'] }).horasPorDia).toMatch(
+      /30 horas por semana/,
+    );
+    expect(validarEstagiario({ ...valido, horarioFim: '13:00' }).horasPorDia).toMatch(
+      /não cabem no horário/,
+    );
+  });
+
+  it('valida na ordem da tela (o foco vai para o primeiro erro)', () => {
+    expect(Object.keys(validarEstagiario({ ...valido, horasPorDia: '', dataInicio: '' }))).toEqual([
+      'horasPorDia',
+      'dataInicio',
+    ]);
+    expect(
+      Object.keys(validarEstagiario({ ...valido, diasSemana: [], horarioInicio: '' })),
+    ).toEqual(['horarioInicio', 'diasSemana']);
   });
 
   it('formata o CEP progressivamente', () => {

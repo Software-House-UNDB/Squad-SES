@@ -116,9 +116,13 @@ describe('Novo processo de documentação', () => {
       expect(screen.getByText('0 no lote')).toBeInTheDocument();
       expect(botaoEnviar()).toBeDisabled();
       expect(screen.getByText('Adicione ao menos um estagiário.')).toBeInTheDocument();
-      expect(
-        screen.getByText('Plano de atividades', { selector: '.np-pendencias li' }),
-      ).toBeInTheDocument();
+      // As pendências do processo vêm primeiro: o card do processo é o primeiro da página.
+      const itens = [...document.querySelectorAll('.np-pendencias li')].map((li) => li.textContent);
+      expect(itens.slice(0, 3)).toEqual([
+        'Escolha o tipo de estágio.',
+        'Informe o nome do supervisor.',
+        'Informe o e-mail do supervisor.',
+      ]);
     });
 
     it('liga o botão de enviar à lista de pendências (leitor de tela)', () => {
