@@ -70,7 +70,7 @@ export class ProcessosController {
   @ApiOperation({
     summary: 'Envia o processo à coordenação (rascunho → enviado; pendencia → enviado no reenvio)',
     description:
-      'Representante UNDB. 409 se o status atual não permite o envio; 422 (pacote_incompleto) ' +
+      'Representante UNDB. 409 se o status atual não permite o envio; 400 (pacote_incompleto) ' +
       'com a lista de pendências se faltar estagiário ou documento obrigatório (RF-08).',
   })
   enviar(@Param('id', ParseUUIDPipe) id: string, @UsuarioAtual() usuario: UsuarioAutenticado) {
@@ -90,8 +90,10 @@ export class ProcessosController {
   @Post(':id/pendencia')
   @HttpCode(200)
   @ApiOperation({
-    summary: 'Coordenação devolve com pendência (em_analise → pendencia)',
-    description: 'O motivo é obrigatório e fica em observacaoAnalise.',
+    summary: 'Coordenação devolve com pendência (em_analise ou aprovado → pendencia)',
+    description:
+      'O motivo é obrigatório e fica em observacaoAnalise. De aprovado, só antes do ' +
+      'início das assinaturas (depois o status já é aguardando_assinaturas).',
   })
   apontarPendencia(
     @Param('id', ParseUUIDPipe) id: string,

@@ -1,8 +1,8 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
-  UnprocessableEntityException,
 } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
@@ -83,6 +83,7 @@ describe('ProcessosService: transições permitidas', () => {
     ['enviar', StatusProcesso.pendencia, StatusProcesso.enviado],
     ['iniciarAnalise', StatusProcesso.enviado, StatusProcesso.em_analise],
     ['apontarPendencia', StatusProcesso.em_analise, StatusProcesso.pendencia],
+    ['apontarPendencia', StatusProcesso.aprovado, StatusProcesso.pendencia],
     ['aprovar', StatusProcesso.em_analise, StatusProcesso.aprovado],
   ] as const)('%s leva de %s a %s e audita', async (acao, de, para) => {
     const { tx, auditoria, service } = montar({ status: de });
@@ -187,7 +188,8 @@ describe('ProcessosService: transições recusadas', () => {
     ['iniciarAnalise', StatusProcesso.aprovado],
     ['apontarPendencia', StatusProcesso.enviado],
     ['apontarPendencia', StatusProcesso.pendencia],
-    ['apontarPendencia', StatusProcesso.aprovado],
+    ['apontarPendencia', StatusProcesso.aguardando_assinaturas],
+    ['apontarPendencia', StatusProcesso.concluido],
     ['aprovar', StatusProcesso.rascunho],
     ['aprovar', StatusProcesso.enviado],
     ['aprovar', StatusProcesso.pendencia],
@@ -223,7 +225,7 @@ describe('ProcessosService: transições recusadas', () => {
 
 describe('ProcessosService: barramento do pacote incompleto no enviar (RF-08)', () => {
   it.each([StatusProcesso.rascunho, StatusProcesso.pendencia])(
-    'em %s, pacote incompleto: 422 com as pendências, sem mudar o status nem auditar',
+    'em %s, pacote incompleto: 400 com as pendências, sem mudar o status nem auditar',
     async (status) => {
       const { tx, auditoria, service, atual } = montar(
         { status },
@@ -232,8 +234,8 @@ describe('ProcessosService: barramento do pacote incompleto no enviar (RF-08)', 
 
       const erro = await erroDe(service.enviar('p1', REPRESENTANTE));
 
-      expect(erro).toBeInstanceOf(UnprocessableEntityException);
-      expect((erro as UnprocessableEntityException).getResponse()).toEqual({
+      expect(erro).toBeInstanceOf(BadRequestException);
+      expect((erro as BadRequestException).getResponse()).toEqual({
         erro: 'pacote_incompleto',
         pendencias: expect.arrayContaining([
           expect.objectContaining({ campo: 'apolice' }),
@@ -246,12 +248,12 @@ describe('ProcessosService: barramento do pacote incompleto no enviar (RF-08)', 
     },
   );
 
-  it('processo sem estagiários: 422', async () => {
+  it('processo sem estagiários: 400', async () => {
     const { service } = montar({}, { estagiarios: [] });
 
     const erro = await erroDe(service.enviar('p1', REPRESENTANTE));
 
-    expect((erro as UnprocessableEntityException).getResponse()).toMatchObject({
+    expect((erro as BadRequestException).getResponse()).toMatchObject({
       erro: 'pacote_incompleto',
       pendencias: [{ campo: 'estagiarios', motivo: 'processo sem estagiários' }],
     });

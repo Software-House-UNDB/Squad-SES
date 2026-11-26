@@ -1,9 +1,9 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
-  UnprocessableEntityException,
 } from '@nestjs/common';
 import { conflito } from '../../common/conflito.js';
 import type { Prisma } from '../../generated/prisma/client.js';
@@ -145,7 +145,8 @@ export class ProcessosService {
   // --- Máquina de estados (RF-07). As regras ficam em maquina-estados.ts. ---
 
   // rascunho -> enviado e pendencia -> enviado (reenvio). Representante.
-  // Com pacote incompleto o processo não avança (RF-08): 422 com tudo o que falta.
+  // Com pacote incompleto o processo não avança (RF-08): 400 com tudo o que falta
+  // (mesmo formato de assinatura_incompleta e tce_incompleto).
   enviar(id: string, usuario: UsuarioAutenticado) {
     return this.transicionar(id, 'enviar', usuario, {}, (tx) =>
       this.garantirPacoteCompleto(tx, id),
@@ -157,7 +158,8 @@ export class ProcessosService {
     return this.transicionar(id, 'iniciar_analise', usuario);
   }
 
-  // em_analise -> pendencia, gravando o motivo na mesma transação. Coordenação.
+  // em_analise -> pendencia e aprovado -> pendencia (erro achado depois de
+  // aprovar), gravando o motivo na mesma transação. Coordenação.
   apontarPendencia(id: string, dto: ApontarPendenciaDto, usuario: UsuarioAutenticado) {
     return this.transicionar(id, 'apontar_pendencia', usuario, {
       observacaoAnalise: dto.motivo,
@@ -239,7 +241,7 @@ export class ProcessosService {
     });
     const pendencias = pendenciasPacote(estagiarios, documentos);
     if (pendencias.length > 0) {
-      throw new UnprocessableEntityException({ erro: 'pacote_incompleto', pendencias });
+      throw new BadRequestException({ erro: 'pacote_incompleto', pendencias });
     }
   }
 

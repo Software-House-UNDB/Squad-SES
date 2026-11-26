@@ -8,7 +8,7 @@ const TODOS = Object.values(StatusProcesso);
 const PERMITIDAS: Record<AcaoProcesso, StatusProcesso[]> = {
   enviar: [StatusProcesso.rascunho, StatusProcesso.pendencia],
   iniciar_analise: [StatusProcesso.enviado],
-  apontar_pendencia: [StatusProcesso.em_analise],
+  apontar_pendencia: [StatusProcesso.em_analise, StatusProcesso.aprovado],
   aprovar: [StatusProcesso.em_analise],
 };
 
@@ -39,12 +39,15 @@ describe('máquina de estados do processo (RF-07)', () => {
     expect(destinos).not.toContain(StatusProcesso.concluido);
   });
 
-  it('não sai de aprovado, aguardando_assinaturas nem concluido', () => {
-    for (const status of [
-      StatusProcesso.aprovado,
-      StatusProcesso.aguardando_assinaturas,
-      StatusProcesso.concluido,
-    ]) {
+  it('de aprovado, só a devolução com pendência', () => {
+    const acoes = Object.keys(TRANSICOES) as AcaoProcesso[];
+    expect(acoes.filter((acao) => podeTransicionar(acao, StatusProcesso.aprovado))).toEqual([
+      'apontar_pendencia',
+    ]);
+  });
+
+  it('não sai de aguardando_assinaturas nem de concluido', () => {
+    for (const status of [StatusProcesso.aguardando_assinaturas, StatusProcesso.concluido]) {
       for (const acao of Object.keys(TRANSICOES) as AcaoProcesso[]) {
         expect(podeTransicionar(acao, status)).toBe(false);
       }

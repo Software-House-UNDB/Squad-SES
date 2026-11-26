@@ -34,8 +34,12 @@ export const TRANSICOES: Record<AcaoProcesso, Transicao> = {
     perfil: Perfil.COORDENACAO_SES,
     descricao: 'entrar em análise',
   },
+  // em_analise -> pendencia e aprovado -> pendencia: a coordenação pode achar
+  // erro nos dados depois de aprovar (ex.: geração do TCE com tce_incompleto).
+  // Depois do /iniciar o status já é aguardando_assinaturas, então não há
+  // devolução com assinatura em andamento.
   apontar_pendencia: {
-    de: [StatusProcesso.em_analise],
+    de: [StatusProcesso.em_analise, StatusProcesso.aprovado],
     para: StatusProcesso.pendencia,
     perfil: Perfil.COORDENACAO_SES,
     descricao: 'receber pendência',
