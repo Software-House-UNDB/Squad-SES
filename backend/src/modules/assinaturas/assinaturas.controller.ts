@@ -44,8 +44,13 @@ export class AssinaturasController {
   // Com o código válido, devolve uma URL temporária (5 min) do PDF.
   @Post('link/:token/documento')
   @HttpCode(200)
-  urlDocumento(@Param('token') token: string, @Body() dto: VerificarOtpDto) {
-    return this.assinaturas.urlDocumentoPorLink(token, dto.codigo);
+  urlDocumento(
+    @Param('token') token: string,
+    @Body() dto: VerificarOtpDto,
+    @Ip() ip: string,
+    @Headers('user-agent') userAgent?: string,
+  ) {
+    return this.assinaturas.urlDocumentoPorLink(token, dto.codigo, { ip, userAgent });
   }
 
   @Post('link/:token/assinar')

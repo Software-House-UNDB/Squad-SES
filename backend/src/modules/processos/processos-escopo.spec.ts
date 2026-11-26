@@ -18,6 +18,7 @@ type Linha = {
   criadoPorId: string;
   criadoPor: { instituicao: string | null };
   observacaoAnalise: null;
+  estagiarios: { id: string }[];
 };
 
 // Banco em memória que aplica o where de verdade: sem isso o teste não provaria o escopo.
@@ -50,7 +51,7 @@ function bancoCom(linhas: Linha[]) {
     $transaction: (operacao: unknown) =>
       typeof operacao === 'function' ? operacao(tx) : Promise.all(operacao as Promise<unknown>[]),
   } as unknown as PrismaService;
-  const auditoria = { registrar: vi.fn() } as unknown as AuditoriaService;
+  const auditoria = { registrar: vi.fn(), registrarAcesso: vi.fn() } as unknown as AuditoriaService;
   return { tx, processo, service: new ProcessosService(prisma, auditoria) };
 }
 
@@ -65,6 +66,7 @@ const processoDe = (
   criadoPorId,
   criadoPor: { instituicao },
   observacaoAnalise: null,
+  estagiarios: [],
 });
 
 const BANCO = [

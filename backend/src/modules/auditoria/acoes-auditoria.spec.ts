@@ -5,13 +5,18 @@ describe('lista canônica de auditoria.acao', () => {
   it('contém as ações definidas na issue #49 e as já usadas', () => {
     expect([...ACOES_AUDITORIA].sort()).toEqual(
       [
+        'ACESSO',
         'ANALISE',
         'ASSINATURA',
+        'DOWNLOAD',
+        'LOGIN',
+        'LOGIN_FALHA',
         'CREATE',
         'DELETE',
         'IMPORT_LOTE',
         'LEMBRETE',
         'RETORNO_COORDENACAO',
+        'TRANSICAO',
         'UPDATE',
       ].sort(),
     );
@@ -21,6 +26,7 @@ describe('lista canônica de auditoria.acao', () => {
     expect(ehAcaoAuditoria('ANALISE')).toBe(true);
     expect(ehAcaoAuditoria('RETORNO_COORDENACAO')).toBe(true);
     expect(ehAcaoAuditoria('ASSINATURA')).toBe(true);
+    expect(ehAcaoAuditoria('DOWNLOAD')).toBe(true);
     expect(ehAcaoAuditoria('analise')).toBe(false);
     expect(ehAcaoAuditoria('DROP')).toBe(false);
     expect(ehAcaoAuditoria(undefined)).toBe(false);

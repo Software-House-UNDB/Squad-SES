@@ -5,6 +5,7 @@ import Badge from '../../components/ui/Badge.tsx';
 import Toast from '../../components/ui/Toast.tsx';
 import { ArquivoRepetidoError, enviarProcesso } from '../../services/processoService.ts';
 import type { Arquivo } from './ArquivoSlot.tsx';
+import DadosDoProcesso from './DadosDoProcesso.tsx';
 import LoteEstagiarios from './LoteEstagiarios.tsx';
 import {
   exigidos,
@@ -17,9 +18,13 @@ import PacoteDocumentos from './PacoteDocumentos.tsx';
 import ResumoProcesso from './ResumoProcesso.tsx';
 import {
   ESTAGIARIO_VAZIO,
+  PROCESSO_VAZIO,
   validarEstagiario,
+  validarProcesso,
   type ErrosEstagiario,
+  type ErrosProcesso,
   type EstagiarioForm,
+  type ProcessoForm,
 } from './validacao.ts';
 import './novoProcesso.css';
 
@@ -40,6 +45,8 @@ export default function NovoProcesso() {
   const [estagiarios, setEstagiarios] = useState<EstagiarioForm[]>([]);
   const [rascunho, setRascunho] = useState<EstagiarioForm>(ESTAGIARIO_VAZIO);
   const [erros, setErros] = useState<ErrosEstagiario>({});
+  const [processo, setProcesso] = useState<ProcessoForm>(PROCESSO_VAZIO);
+  const [errosProcesso, setErrosProcesso] = useState<ErrosProcesso>({});
   const [anexos, setAnexos] = useState<Record<string, Arquivo>>({});
   const [errosArquivo, setErrosArquivo] = useState<Record<string, string>>({});
   const [envio, setEnvio] = useState<Envio>('editando');
@@ -60,13 +67,20 @@ export default function NovoProcesso() {
 
   const anexados = new Set(Object.keys(anexos));
   const todos = exigidos(estagiarios);
-  const pendencias = pendenciasDoPacote(estagiarios, anexados);
+  const pendenciasProcesso = Object.values(validarProcesso(processo));
+  // As do processo primeiro: o card do processo é o primeiro da página.
+  const pendencias = [...pendenciasProcesso, ...pendenciasDoPacote(estagiarios, anexados)];
   const completos = todos.filter((d) => anexados.has(d.chave)).length;
   const podeEnviar = pendencias.length === 0 && envio === 'editando';
 
   function campo<K extends keyof EstagiarioForm>(chave: K, valor: EstagiarioForm[K]) {
     setRascunho((atual) => ({ ...atual, [chave]: valor }));
     if (erros[chave]) setErros((atual) => ({ ...atual, [chave]: undefined }));
+  }
+
+  function campoProcesso<K extends keyof ProcessoForm>(chave: K, valor: ProcessoForm[K]) {
+    setProcesso((atual) => ({ ...atual, [chave]: valor }));
+    if (errosProcesso[chave]) setErrosProcesso((atual) => ({ ...atual, [chave]: undefined }));
   }
 
   function adicionarEstagiario(e: FormEvent) {
@@ -120,7 +134,10 @@ export default function NovoProcesso() {
       return problema ? { ...resto, [chave]: problema } : resto;
     });
     if (!problema) {
-      setAnexos((atual) => ({ ...atual, [chave]: { nome: arquivo.name, tamanho: arquivo.size, hash: hash ?? undefined } }));
+      setAnexos((atual) => ({
+        ...atual,
+        [chave]: { nome: arquivo.name, tamanho: arquivo.size, hash: hash ?? undefined },
+      }));
     }
   }
 
@@ -133,6 +150,13 @@ export default function NovoProcesso() {
 
   async function enviar() {
     if (!podeEnviar) return;
+    const encontrados = validarProcesso(processo);
+    setErrosProcesso(encontrados);
+    const primeiro = Object.keys(encontrados)[0];
+    if (primeiro) {
+      document.getElementById(id(primeiro))?.focus();
+      return;
+    }
     setErroEnvio(null);
     setEnvio('enviando');
     try {
@@ -159,6 +183,8 @@ export default function NovoProcesso() {
     setEstagiarios([]);
     setRascunho(ESTAGIARIO_VAZIO);
     setErros({});
+    setProcesso(PROCESSO_VAZIO);
+    setErrosProcesso({});
     setAnexos({});
     setErrosArquivo({});
     setErroEnvio(null);
@@ -204,6 +230,7 @@ export default function NovoProcesso() {
 
       <div className="np-layout">
         <div className="np-main">
+          <DadosDoProcesso dados={processo} erros={errosProcesso} id={id} onCampo={campoProcesso} />
           <LoteEstagiarios
             estagiarios={estagiarios}
             rascunho={rascunho}

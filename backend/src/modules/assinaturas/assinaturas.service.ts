@@ -111,6 +111,7 @@ export class AssinaturasService {
       where: { id: processoId },
       include: {
         criadoPor: { select: { id: true, nome: true, email: true } },
+        estagiarios: { select: { id: true } },
         documentos: {
           where: { tipo: TipoDocumento.termo_compromisso },
           include: {
@@ -148,6 +149,25 @@ export class AssinaturasService {
           campo: 'email',
           motivo: 'e-mail do estagiário não informado',
           estagiarioId: documento.estagiario.id,
+        });
+      }
+    }
+    // Um TCE por estagiário (POST /processos/:id/tces gera todos de uma vez):
+    // sem isso, um estagiário ficaria sem termo e o processo concluiria assim.
+    const tcesPorEstagiario = new Map<string, number>();
+    for (const documento of processo.documentos) {
+      if (documento.estagiario) {
+        const id = documento.estagiario.id;
+        tcesPorEstagiario.set(id, (tcesPorEstagiario.get(id) ?? 0) + 1);
+      }
+    }
+    for (const { id } of processo.estagiarios) {
+      const quantidade = tcesPorEstagiario.get(id) ?? 0;
+      if (quantidade !== 1) {
+        pendencias.push({
+          campo: 'tce',
+          motivo: quantidade === 0 ? 'estagiário sem TCE' : 'estagiário com mais de um TCE',
+          estagiarioId: id,
         });
       }
     }
@@ -435,10 +455,24 @@ export class AssinaturasService {
 
   // URL temporária do PDF para quem tem o link e o código (RF-14: a tela só
   // libera o botão de assinar depois de o PDF ser lido até o fim).
-  async urlDocumentoPorLink(token: string, codigo: string) {
+  async urlDocumentoPorLink(token: string, codigo: string, evidencia: EvidenciaRequisicao) {
     const signatario = await this.carregarLink(token);
     await this.conferirOtp(signatario, codigo);
     const { documento } = signatario;
+    // Signatário de fora não tem usuário: a auditoria guarda quem pelo signatário.
+    await this.auditoria.registrarAcesso(
+      { ip: evidencia.ip },
+      {
+        acao: 'DOWNLOAD',
+        entidade: 'documento',
+        entidadeId: documento.id,
+        dadosDepois: {
+          signatarioId: signatario.id,
+          papel: signatario.papel,
+          userAgent: evidencia.userAgent,
+        },
+      },
+    );
     const url = await this.storage.urlAssinada(
       documento.storageKey,
       documento.nomeArquivo,
