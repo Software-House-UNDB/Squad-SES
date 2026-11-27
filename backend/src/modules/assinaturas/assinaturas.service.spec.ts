@@ -17,6 +17,8 @@ import { calcularSha256 } from '../documentos/arquivo.js';
 import type { AuditoriaService } from '../auditoria/auditoria.service.js';
 import {
   AssinaturasService,
+  LINK_VALIDADE_MS,
+  linkMantidoNoLembrete,
   OTP_INTERVALO_MS,
   OTP_MAX_TENTATIVAS,
   OTP_VALIDADE_MS,
@@ -529,18 +531,106 @@ describe('AssinaturasService.reenviarLinksPendentes', () => {
   });
 });
 
+describe('linkMantidoNoLembrete', () => {
+  const AGORA = new Date('2026-11-25T11:30:00Z');
+  const MANTER_ATE = new Date('2026-11-28T03:00:00Z');
+  // Link emitido e enviado na segunda 23/11, vale 7 dias.
+  const EMITIDO = new Date('2026-11-23T12:00:00Z');
+  const ENVIADO = {
+    linkEnviadoEm: new Date(EMITIDO.getTime() + 2_000),
+    tokenExpiraEm: new Date(EMITIDO.getTime() + LINK_VALIDADE_MS),
+    otpExpiraEm: null,
+  };
+
+  it('mantém o link que chegou e vale até o fim do dia do próximo lembrete', () => {
+    expect(linkMantidoNoLembrete(ENVIADO, MANTER_ATE, AGORA)).toEqual(ENVIADO.tokenExpiraEm);
+    const noLimite = { ...ENVIADO, tokenExpiraEm: MANTER_ATE };
+    expect(linkMantidoNoLembrete(noLimite, MANTER_ATE, AGORA)).toEqual(MANTER_ATE);
+  });
+
+  it('troca o link que vence antes do próximo lembrete', () => {
+    const vencendo = { ...ENVIADO, tokenExpiraEm: new Date('2026-11-27T12:00:00Z') };
+    expect(linkMantidoNoLembrete(vencendo, MANTER_ATE, AGORA)).toBeNull();
+  });
+
+  it('com código pedido em aberto, mantém o link que ainda vale, mesmo vencendo antes', () => {
+    const vencendo = {
+      ...ENVIADO,
+      tokenExpiraEm: new Date('2026-11-27T12:00:00Z'),
+      otpExpiraEm: new Date(AGORA.getTime() + 5 * 60_000),
+    };
+    expect(linkMantidoNoLembrete(vencendo, MANTER_ATE, AGORA)).toEqual(vencendo.tokenExpiraEm);
+    const codigoVencido = { ...vencendo, otpExpiraEm: new Date(AGORA.getTime() - 1) };
+    expect(linkMantidoNoLembrete(codigoVencido, MANTER_ATE, AGORA)).toBeNull();
+  });
+
+  it('troca o link vencido, mesmo com código em aberto', () => {
+    const vencido = {
+      ...ENVIADO,
+      tokenExpiraEm: AGORA,
+      otpExpiraEm: new Date(AGORA.getTime() + 60_000),
+    };
+    expect(linkMantidoNoLembrete(vencido, MANTER_ATE, AGORA)).toBeNull();
+  });
+
+  it('troca o link que nunca chegou: sem envio, ou envio anterior ao token atual', () => {
+    expect(
+      linkMantidoNoLembrete({ ...ENVIADO, linkEnviadoEm: null }, MANTER_ATE, AGORA),
+    ).toBeNull();
+    // Reenvio que gerou o token e falhou no e-mail: linkEnviadoEm é do link antigo.
+    const reenvioFalhou = { ...ENVIADO, linkEnviadoEm: new Date(EMITIDO.getTime() - 60_000) };
+    expect(linkMantidoNoLembrete(reenvioFalhou, MANTER_ATE, AGORA)).toBeNull();
+    expect(
+      linkMantidoNoLembrete({ ...ENVIADO, tokenExpiraEm: null }, MANTER_ATE, AGORA),
+    ).toBeNull();
+  });
+});
+
 describe('AssinaturasService.enviarLembrete', () => {
   const CONFIG_FRONT = { ...CONFIG, FRONTEND_URL: 'https://ses.exemplo/' };
+  const AGORA = new Date('2026-11-25T11:30:00Z');
+  const MANTER_ATE = new Date('2026-11-28T03:00:00Z');
+  const SUPERVISOR = {
+    id: 's1',
+    nome: 'Sup Souza',
+    email: 'sup@exemplo.com',
+    papel: PapelSignatario.SUPERVISOR,
+    linkEnviadoEm: new Date('2026-11-23T12:00:02Z'),
+    tokenExpiraEm: new Date('2026-11-30T12:00:00Z'),
+    otpExpiraEm: null,
+  };
 
-  it('quem assina por link recebe link novo no e-mail de lembrete', async () => {
+  it('link atual ainda serve: lembrete sem URL e sem trocar o token nem o código', async () => {
     const { service, prisma, email } = montar(CONFIG_FRONT);
 
-    await service.enviarLembrete({
-      id: 's1',
-      nome: 'Sup Souza',
-      email: 'sup@exemplo.com',
-      papel: PapelSignatario.SUPERVISOR,
+    expect(await service.enviarLembrete(SUPERVISOR, MANTER_ATE, AGORA)).toEqual({
+      linkNovo: false,
     });
+
+    expect(prisma.signatario.update).not.toHaveBeenCalled();
+    const mensagem = email.enviar.mock.calls[0][0];
+    expect(mensagem.para).toBe('sup@exemplo.com');
+    expect(mensagem.assunto).toMatch(/^Lembrete:/);
+    expect(mensagem.texto).not.toContain('/assinar/');
+    expect(mensagem.texto).toContain('continua valendo até 30/11/2026, 09:00');
+    expect(mensagem.texto).toContain('peça um novo link à coordenação');
+  });
+
+  it('falha no e-mail com o link mantido não mexe no link', async () => {
+    const { service, prisma, email } = montar(CONFIG_FRONT);
+    email.enviar.mockRejectedValueOnce(new Error('SMTP fora do ar'));
+
+    await expect(service.enviarLembrete(SUPERVISOR, MANTER_ATE, AGORA)).rejects.toThrow(
+      'SMTP fora do ar',
+    );
+    expect(prisma.signatario.update).not.toHaveBeenCalled();
+  });
+
+  it('link vencendo antes do próximo lembrete: recebe link novo no e-mail de lembrete', async () => {
+    const { service, prisma, email } = montar(CONFIG_FRONT);
+    const vencendo = { ...SUPERVISOR, tokenExpiraEm: new Date('2026-11-27T12:00:00Z') };
+
+    expect(await service.enviarLembrete(vencendo, MANTER_ATE, AGORA)).toEqual({ linkNovo: true });
 
     // Token novo antes do envio; linkEnviadoEm depois.
     expect(prisma.signatario.update.mock.calls[0][0].data).toHaveProperty('tokenHash');
@@ -555,12 +645,21 @@ describe('AssinaturasService.enviarLembrete', () => {
   it('o representante da UNDB recebe só o endereço do sistema, sem link', async () => {
     const { service, prisma, email } = montar(CONFIG_FRONT);
 
-    await service.enviarLembrete({
-      id: 's4',
-      nome: 'Rep UNDB',
-      email: 'rep@undb.edu.br',
-      papel: PapelSignatario.REPRESENTANTE_UNDB,
-    });
+    expect(
+      await service.enviarLembrete(
+        {
+          ...SUPERVISOR,
+          id: 's4',
+          nome: 'Rep UNDB',
+          email: 'rep@undb.edu.br',
+          papel: PapelSignatario.REPRESENTANTE_UNDB,
+          linkEnviadoEm: null,
+          tokenExpiraEm: null,
+        },
+        MANTER_ATE,
+        AGORA,
+      ),
+    ).toEqual({ linkNovo: false });
 
     expect(prisma.signatario.update).not.toHaveBeenCalled();
     const mensagem = email.enviar.mock.calls[0][0];
