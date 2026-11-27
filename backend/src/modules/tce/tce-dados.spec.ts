@@ -90,6 +90,25 @@ describe('pendenciasTce', () => {
     ]);
   });
 
+  it('menor de idade sem o nome do responsável é pendência (#80)', () => {
+    const pendencias = pendenciasTce({
+      tipoEstagio: TipoEstagio.obrigatorio,
+      estagiarios: [
+        estagiarioCompleto({ id: 'e2', menorIdade: true, responsavelNome: 'Maria Souza' }),
+        estagiarioCompleto({ id: 'e3', menorIdade: true, responsavelNome: '  ' }),
+        estagiarioCompleto({ id: 'e4', menorIdade: true, responsavelNome: null }),
+      ],
+    });
+
+    expect(pendencias).toEqual(
+      ['e3', 'e4'].map((estagiarioId) => ({
+        campo: 'responsavelNome',
+        motivo: 'nome do responsável não informado (menor de idade)',
+        estagiarioId,
+      })),
+    );
+  });
+
   it('processo sem estagiários é pendência', () => {
     expect(pendenciasTce({ tipoEstagio: TipoEstagio.obrigatorio, estagiarios: [] })).toEqual([
       { campo: 'estagiarios', motivo: 'processo sem estagiários' },
@@ -143,6 +162,28 @@ describe('montarDadosTce', () => {
       mes: 'novembro',
       ano: '2026',
     });
+  });
+
+  it('maior de idade: sem responsável, mesmo que haja um nome gravado', () => {
+    const dados = montarDadosTce(
+      { tipoEstagio: TipoEstagio.obrigatorio, estagiarios: [] },
+      estagiarioCompleto({ responsavelNome: 'Resto de cadastro antigo' }),
+      config,
+      new Date(),
+    );
+
+    expect(dados).toMatchObject({ is_menor: false, responsavel_nome: '' });
+  });
+
+  it('menor de idade: leva o nome do responsável', () => {
+    const dados = montarDadosTce(
+      { tipoEstagio: TipoEstagio.obrigatorio, estagiarios: [] },
+      estagiarioCompleto({ menorIdade: true, responsavelNome: ' Maria Souza ' }),
+      config,
+      new Date(),
+    );
+
+    expect(dados).toMatchObject({ is_menor: true, responsavel_nome: 'Maria Souza' });
   });
 
   it('marca pós-graduação', () => {
