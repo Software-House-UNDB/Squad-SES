@@ -44,8 +44,8 @@ export function emailLinkAssinatura(dados: {
   };
 }
 
-// Lembrete do cron para quem ainda não assinou. O link é novo: o anterior
-// deixa de valer, então o texto diz isso.
+// Lembrete do cron quando o link atual vence antes do próximo lembrete (ou
+// nunca chegou): o link é novo e o anterior deixa de valer, então o texto diz isso.
 export function emailLembreteAssinatura(dados: {
   nome: string;
   papel: PapelSignatario;
@@ -65,6 +65,34 @@ export function emailLembreteAssinatura(dados: {
       `Este é o seu link atual: ele vale até ${dataHora(dados.expiraEm)}, e os links ` +
         'de e-mails anteriores deixaram de valer. Ao abrir, você vai pedir um código ' +
         'de 6 dígitos, que chega neste e-mail.',
+      '',
+      'Se você não esperava esta mensagem, ignore-a.',
+    ].join('\n'),
+  };
+}
+
+// Lembrete do cron quando o link do e-mail anterior ainda vale até o próximo
+// lembrete: o token não muda (uma falha de envio não derruba o link antigo, e
+// quem está no meio do código não perde o link), então o e-mail não leva URL.
+export function emailLembreteMesmoLink(dados: {
+  nome: string;
+  papel: PapelSignatario;
+  expiraEm: Date;
+}): Conteudo {
+  return {
+    assunto: 'Lembrete: Termo de Compromisso de Estágio aguardando sua assinatura',
+    texto: [
+      `Olá, ${dados.nome}.`,
+      '',
+      `O Termo de Compromisso de Estágio (TCE) em que você é ${PAPEL[dados.papel]} ` +
+        'ainda aguarda a sua assinatura no sistema de estágios da SES-MA.',
+      '',
+      'Para ler e assinar o documento, use o link do último e-mail de assinatura que ' +
+        `você recebeu do sistema: ele continua valendo até ${dataHora(dados.expiraEm)}. ` +
+        'Ao abrir, você vai pedir um código de 6 dígitos, que chega neste e-mail.',
+      '',
+      'Se não encontrar o e-mail ou o link não abrir, peça um novo link à coordenação ' +
+        'de estágios da SES-MA.',
       '',
       'Se você não esperava esta mensagem, ignore-a.',
     ].join('\n'),

@@ -119,9 +119,18 @@ export class CalendarioUtil {
 
   // O dia útil que fica `quantidade` dias úteis antes de `dia` (sem contar `dia`).
   voltarDiasUteis(dia: Dia, quantidade: number): Dia {
+    return this.andarDiasUteis(dia, quantidade, -1);
+  }
+
+  // O dia útil que fica `quantidade` dias úteis depois de `dia` (sem contar `dia`).
+  avancarDiasUteis(dia: Dia, quantidade: number): Dia {
+    return this.andarDiasUteis(dia, quantidade, 1);
+  }
+
+  private andarDiasUteis(dia: Dia, quantidade: number, passo: 1 | -1): Dia {
     let atual = dia;
     for (let contados = 0; contados < quantidade;) {
-      atual = somarDias(atual, -1);
+      atual = somarDias(atual, passo);
       if (this.ehDiaUtil(atual)) contados++;
     }
     return atual;

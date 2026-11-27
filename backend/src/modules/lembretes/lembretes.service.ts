@@ -7,9 +7,12 @@ import {
   lerFeriadosExtras,
   somarDias,
 } from '../../common/dias-uteis.js';
-import { PapelSignatario, StatusProcesso } from '../../generated/prisma/enums.js';
+import { StatusProcesso } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { AssinaturasService } from '../assinaturas/assinaturas.service.js';
+import {
+  AssinaturasService,
+  type SignatarioParaLembrete,
+} from '../assinaturas/assinaturas.service.js';
 import { AuditoriaService } from '../auditoria/auditoria.service.js';
 
 // Padrões: lembrete a cada 2 dias úteis sem assinatura, no máximo 5 por signatário.
@@ -58,11 +61,12 @@ export class LembretesService {
     }
 
     // Último contato até o fim do dia útil que fica N dias úteis antes de hoje.
-    const diaLimite = this.calendario.voltarDiasUteis(
-      hoje,
-      this.numero('LEMBRETE_ASSINATURA_DIAS_UTEIS', DIAS_UTEIS_PADRAO),
-    );
+    const diasUteis = this.numero('LEMBRETE_ASSINATURA_DIAS_UTEIS', DIAS_UTEIS_PADRAO);
+    const diaLimite = this.calendario.voltarDiasUteis(hoje, diasUteis);
     const limite = inicioDoDia(somarDias(diaLimite, 1));
+    // O link atual que vale até o fim do dia do próximo lembrete não é trocado.
+    const proximoLembrete = this.calendario.avancarDiasUteis(hoje, diasUteis);
+    const manterLinkAte = inicioDoDia(somarDias(proximoLembrete, 1));
 
     const pendentes = await this.prisma.signatario.findMany({
       where: {
@@ -87,6 +91,9 @@ export class LembretesService {
         email: true,
         papel: true,
         lembreteEnviadoEm: true,
+        linkEnviadoEm: true,
+        tokenExpiraEm: true,
+        otpExpiraEm: true,
         documento: { select: { processoId: true } },
       },
       orderBy: { criadoEm: 'asc' },
@@ -95,7 +102,7 @@ export class LembretesService {
     let enviados = 0;
     let falhas = 0;
     for (const signatario of pendentes) {
-      const resultado = await this.lembrar(signatario, agora);
+      const resultado = await this.lembrar(signatario, agora, manterLinkAte);
       if (resultado === 'enviado') enviados++;
       if (resultado === 'falha') falhas++;
     }
@@ -106,15 +113,12 @@ export class LembretesService {
   }
 
   private async lembrar(
-    signatario: {
-      id: string;
-      nome: string;
-      email: string;
-      papel: PapelSignatario;
+    signatario: SignatarioParaLembrete & {
       lembreteEnviadoEm: Date | null;
       documento: { processoId: string };
     },
     agora: Date,
+    manterLinkAte: Date,
   ): Promise<'enviado' | 'falha' | 'ignorado'> {
     const { id, lembreteEnviadoEm: anterior } = signatario;
     // Trava: só quem muda a data que leu manda o e-mail. Uma execução
@@ -125,8 +129,9 @@ export class LembretesService {
     });
     if (count === 0) return 'ignorado';
 
+    let linkNovo: boolean;
     try {
-      await this.assinaturas.enviarLembrete(signatario);
+      ({ linkNovo } = await this.assinaturas.enviarLembrete(signatario, manterLinkAte, agora));
     } catch (erro) {
       this.logger.error(
         `Falha ao enviar o lembrete ao signatário ${id}`,
@@ -154,7 +159,11 @@ export class LembretesService {
             acao: 'LEMBRETE',
             entidade: 'signatario',
             entidadeId: id,
-            dadosDepois: { papel: signatario.papel, processoId: signatario.documento.processoId },
+            dadosDepois: {
+              papel: signatario.papel,
+              processoId: signatario.documento.processoId,
+              linkNovo,
+            },
           },
         ),
       );

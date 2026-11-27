@@ -7,6 +7,8 @@ import { LembretesService } from './lembretes.service.js';
 
 // Quarta-feira, 25/11/2026, 08:30 em São Luís.
 const QUARTA = new Date('2026-11-25T11:30:00Z');
+// Próximo lembrete: sexta 27/11 (2 dias úteis); o link que vale até o fim dela fica.
+const FIM_DA_SEXTA = new Date('2026-11-28T03:00:00Z');
 
 const SUPERVISOR = {
   id: 's1',
@@ -14,6 +16,9 @@ const SUPERVISOR = {
   email: 'sup@exemplo.com',
   papel: PapelSignatario.SUPERVISOR,
   lembreteEnviadoEm: null as Date | null,
+  linkEnviadoEm: new Date('2026-11-23T12:00:00Z') as Date | null,
+  tokenExpiraEm: new Date('2026-11-30T12:00:00Z') as Date | null,
+  otpExpiraEm: null as Date | null,
   documento: { processoId: 'p1' },
 };
 
@@ -26,7 +31,7 @@ function montar(config: Record<string, string> = {}) {
     },
     $transaction: (operacao: (cliente: typeof tx) => unknown) => operacao(tx),
   };
-  const assinaturas = { enviarLembrete: vi.fn() };
+  const assinaturas = { enviarLembrete: vi.fn().mockResolvedValue({ linkNovo: false }) };
   const auditoria = { registrar: vi.fn() };
   const service = new LembretesService(
     prisma as unknown as PrismaService,
@@ -110,7 +115,7 @@ describe('LembretesService.executar', () => {
       where: { id: 's1', lembreteEnviadoEm: null, assinatura: { is: null } },
       data: { lembreteEnviadoEm: QUARTA, lembretesEnviados: { increment: 1 } },
     });
-    expect(assinaturas.enviarLembrete).toHaveBeenCalledWith(SUPERVISOR);
+    expect(assinaturas.enviarLembrete).toHaveBeenCalledWith(SUPERVISOR, FIM_DA_SEXTA, QUARTA);
     expect(auditoria.registrar).toHaveBeenCalledWith(
       {},
       {},
@@ -118,11 +123,23 @@ describe('LembretesService.executar', () => {
         acao: 'LEMBRETE',
         entidade: 'signatario',
         entidadeId: 's1',
-        dadosDepois: { papel: PapelSignatario.SUPERVISOR, processoId: 'p1' },
+        dadosDepois: { papel: PapelSignatario.SUPERVISOR, processoId: 'p1', linkNovo: false },
       },
     );
     // O e-mail não vai para a auditoria.
     expect(JSON.stringify(auditoria.registrar.mock.calls)).not.toContain('sup@exemplo.com');
+  });
+
+  it('o próximo lembrete pula fim de semana e feriado, e a auditoria diz se o link mudou', async () => {
+    const { service, assinaturas, auditoria } = montar();
+    assinaturas.enviarLembrete.mockResolvedValue({ linkNovo: true });
+
+    // Quinta 19/11 + 2 dias úteis = terça 24/11 (sexta 20/11 é feriado): o link
+    // que vale até o fim da terça fica.
+    await service.executar(new Date('2026-11-19T11:30:00Z'));
+
+    expect(assinaturas.enviarLembrete.mock.calls[0][1]).toEqual(new Date('2026-11-25T03:00:00Z'));
+    expect(auditoria.registrar.mock.calls[0][2].dadosDepois.linkNovo).toBe(true);
   });
 
   it('outra execução já pegou o signatário (ou ele assinou): não envia', async () => {

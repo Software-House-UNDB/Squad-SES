@@ -55,6 +55,13 @@ describe('CalendarioUtil', () => {
     expect(calendario.voltarDiasUteis('2026-11-26', 2)).toBe('2026-11-24');
   });
 
+  it('avança dias úteis pulando fim de semana e feriado', () => {
+    // Quarta 18/11 + 2: quinta 19/11 e segunda 23/11 (sexta 20/11 é feriado).
+    expect(calendario.avancarDiasUteis('2026-11-18', 2)).toBe('2026-11-23');
+    expect(calendario.avancarDiasUteis('2026-11-25', 2)).toBe('2026-11-27');
+    expect(calendario.avancarDiasUteis('2026-11-27', 1)).toBe('2026-11-30');
+  });
+
   it('feriados extras: MM-DD todo ano, AAAA-MM-DD só na data', () => {
     const comExtras = new CalendarioUtil(['09-08', '2026-12-24']);
 

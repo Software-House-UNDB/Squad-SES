@@ -32,6 +32,7 @@ import { formatarCodigo, gerarCodigoValidacao } from './codigo-validacao.js';
 import {
   emailCodigoOtp,
   emailLembreteAssinatura,
+  emailLembreteMesmoLink,
   emailLembreteRepresentante,
   emailLinkAssinatura,
 } from './emails.js';
@@ -59,6 +60,30 @@ export type SignatarioParaLink = {
   email: string;
   papel: PapelSignatario;
 };
+
+export type SignatarioParaLembrete = SignatarioParaLink & {
+  linkEnviadoEm: Date | null;
+  tokenExpiraEm: Date | null;
+  otpExpiraEm: Date | null;
+};
+
+// O lembrete mantém o link atual quando ele chegou ao signatário e ainda vale:
+// até `manterAte` (o fim do dia do próximo lembrete) ou, vencendo antes, enquanto
+// houver código pedido em aberto (trocar agora invalidaria o código; o próximo
+// lembrete troca). O token atual foi emitido em tokenExpiraEm - LINK_VALIDADE_MS;
+// linkEnviadoEm anterior a isso quer dizer que o envio dele falhou. Devolve a
+// validade do link mantido, ou null quando o lembrete precisa de link novo.
+export function linkMantidoNoLembrete(
+  signatario: Pick<SignatarioParaLembrete, 'linkEnviadoEm' | 'tokenExpiraEm' | 'otpExpiraEm'>,
+  manterAte: Date,
+  agora = new Date(),
+): Date | null {
+  const { linkEnviadoEm, tokenExpiraEm, otpExpiraEm } = signatario;
+  if (!linkEnviadoEm || !tokenExpiraEm || tokenExpiraEm <= agora) return null;
+  if (linkEnviadoEm.getTime() < tokenExpiraEm.getTime() - LINK_VALIDADE_MS) return null;
+  if (tokenExpiraEm >= manterAte) return tokenExpiraEm;
+  return otpExpiraEm && otpExpiraEm > agora ? tokenExpiraEm : null;
+}
 
 const INCLUIR_NO_LINK = {
   assinatura: { select: { id: true } },
@@ -346,17 +371,32 @@ export class AssinaturasService {
   }
 
   // Lembrete do cron (LembretesService) para quem ainda não assinou. Quem
-  // assina por link recebe um link novo (o anterior deixa de valer, como no
-  // reenviarLink); o representante da UNDB recebe só o endereço do sistema.
-  async enviarLembrete(signatario: SignatarioParaLink) {
+  // assina por link só recebe link novo quando o atual não serve até o próximo
+  // lembrete (ver linkMantidoNoLembrete); fora isso o e-mail aponta para o link
+  // anterior, que continua valendo. O representante da UNDB recebe só o
+  // endereço do sistema.
+  async enviarLembrete(
+    signatario: SignatarioParaLembrete,
+    manterLinkAte: Date,
+    agora = new Date(),
+  ): Promise<{ linkNovo: boolean }> {
     if (signatario.papel === PapelSignatario.REPRESENTANTE_UNDB) {
       await this.email.enviar({
         para: signatario.email,
         ...emailLembreteRepresentante({ nome: signatario.nome, url: this.urlDoFrontend() }),
       });
-      return;
+      return { linkNovo: false };
+    }
+    const expiraEm = linkMantidoNoLembrete(signatario, manterLinkAte, agora);
+    if (expiraEm) {
+      await this.email.enviar({
+        para: signatario.email,
+        ...emailLembreteMesmoLink({ nome: signatario.nome, papel: signatario.papel, expiraEm }),
+      });
+      return { linkNovo: false };
     }
     await this.emitirLink(signatario, emailLembreteAssinatura);
+    return { linkNovo: true };
   }
 
   // Página pública do link: diz quem deve assinar o quê, sem pedir login.
